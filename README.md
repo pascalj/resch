@@ -1,4 +1,4 @@
-# Resch
+# Resch 🥨
 
 Static Scheduling Algorithms for FPGAs
 
