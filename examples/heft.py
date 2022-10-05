@@ -1,5 +1,6 @@
 from context import resch as r
-from resch import machine, graph, optimal, heft
+from resch import machine, graph, optimal
+from resch.heft import original, la
 from resch import list as ls
 import numpy as np
 import unittest
@@ -21,5 +22,7 @@ for f in g.iter_vertices():
                 if f != t and p_f != p_t:
                     c_heft[f, t, p_f, p_t] = 15
 
-S = heft.build_schedule(g, w_heft, c_heft)
+# S = original.build_schedule(g, w_heft, c_heft)
+S = la.build_schedule(g, w_heft, c_heft)
 S.save_svg("heft_simple_r.svg", mm_r, print_locs = False)
+

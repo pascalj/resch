@@ -5,11 +5,14 @@ import functools
 # c[task, task]
 class HEFT:
 
-    def __init__(self, g, w, c):
+    def __init__(self, g, w, c, S = None):
         self.g = g
         self.w = w
         self.c = c
-        self.S = schedule.Schedule()
+        if S:
+            self.S = S
+        else:
+            self.S = schedule.Schedule()
 
     def cbar(self, f, t):
         # get the mean of all cost from task f to t
@@ -29,7 +32,7 @@ class HEFT:
 
         ready_at = 0
         if self.g.vertex(v).in_degree() > 0:
-            ready_at = max([self.S.task(n).t_f + self.c[n, v, self.S.task(n).pe.index, p] for n in self.g.iter_in_neighbors(v)])
+            ready_at = max([(self.S.task(n).t_f + self.c[n, v, self.S.task(n).pe.index, p]) if self.S.task(n) else 0 for n in self.g.iter_in_neighbors(v)])
 
         return self.S.earliest_gap(p, ready_at, duration)
 
@@ -43,7 +46,6 @@ class HEFT:
         return self.w[v, p]
 
     def allocate(self, v):
-
         #minimize EFT for all PEs
         num_pes = self.w.shape[1]
         eft = min([(self.start_time(v, p), self.finish_time(v, p), p) for p in range(num_pes)], key = lambda t: t[1])

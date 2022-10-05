@@ -13,7 +13,7 @@ class Schedule:
         return max(task.t_s + task.cost for task in self.tasks)
 
     def task(self, v):
-        return next(t for t in self.tasks if t.index == v)
+        return next(iter([t for t in self.tasks if t.index == v]), None)
 
     def earliest_gap(self, p, earliest, duration):
         p_tasks = list(filter(lambda t: t.pe.index == p, self.tasks))
@@ -28,6 +28,9 @@ class Schedule:
                 return earliest_start
 
         return max(p_times[-1][1], earliest)
+
+    def makespan(self):
+        return max(t.t_f for t in self.tasks)
 
 
     def save_svg(self, path, m, print_locs = True):
