@@ -10,6 +10,5 @@ import graph_tool.all as gt
 mm_r = machine.get_r([range(w.shape[1])])
 
 S = original.build_schedule(g, w, c)
-gt.graph_draw(g, vertex_text=g.vertex_index, output="test.pdf")
-S.save_svg("heft_simple_r.svg", mm_r, print_locs = False)
+print([(t.t_s, t.t_f, t.pe.index) for t in S.tasks])
 
