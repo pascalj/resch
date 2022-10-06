@@ -1,6 +1,5 @@
 from context import resch as r
 from resch import machine, graph, optimal
-from resch import list as ls
 import unittest
 import graph_tool.all as gt
 
@@ -15,5 +14,3 @@ S.save_svg("simple_pr.svg", mm_pr)
 S = optimal.build_schedule(mm_r, g)
 S.save_svg("simple_r.svg", mm_r)
 
-S = ls.build_schedule(mm_r, g)
-S.save_svg("list_simple_r.svg", mm_r)
