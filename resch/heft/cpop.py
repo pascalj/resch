@@ -16,9 +16,9 @@ class CPOP(original.HEFT):
         entry_task = self.entry_tasks()[0]
         ready_set.put((self.rank_task(entry_task), entry_task))
 
-        all_tasks = {}
+        done_tasks = {}
         for t in self.g.iter_vertices():
-            all_tasks[t] = False
+            done_tasks[t] = False
 
         while not ready_set.empty():
             priority, t = ready_set.get()
@@ -27,12 +27,12 @@ class CPOP(original.HEFT):
                 t_s = self.start_time(t, best_pe)
                 p = best_pe
             else:
-                t_s, p = self.eft(t)
+                t_f, p = self.eft(t)
             pe = machine.PE(p, machine.Configuration(0, [0]), [])
-            self.S.add_task(task.ScheduledTask(task.Task(t, t, self.duration(t, best_pe), []), t_s, pe, 0))
-            all_tasks[t] = True
+            self.S.add_task(task.ScheduledTask(task.Task(t, t, self.duration(t, best_pe), []), self.start_time(t, p), pe, 0))
+            done_tasks[t] = True
             for n in self.g.iter_out_neighbors(t):
-                if all(all_tasks[p] for p in self.g.iter_in_neighbors(n)):
+                if all(done_tasks[p] for p in self.g.iter_in_neighbors(n)):
                     ready_set.put((self.rank_task(n), n))
 
         return self.S

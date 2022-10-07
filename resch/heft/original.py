@@ -35,7 +35,7 @@ class HEFT:
         return self.S.earliest_gap(p, self.edge_finish_time(v), self.duration(v, p))
 
     def eft(self, v):
-        return min([(self.finish_time(v, p), p) for p in range(self.w.shape[1])], key = lambda t: t[1])
+        return min([(self.finish_time(v, p), p) for p in range(self.w.shape[1])], key = lambda t: t[0])
 
     def edge_finish_time(self, v):
         return max([self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)], default = 0)

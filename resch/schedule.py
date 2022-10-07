@@ -24,7 +24,7 @@ class Schedule:
         win = chain((0,0), p_times[:-1])
         for t1, t2 in zip (win, p_times):
             earliest_start = max(earliest, t2[1])
-            if t2[0] - earliest > duration:
+            if t2[0] - earliest >= duration:
                 return earliest_start
 
         return max(p_times[-1][1], earliest)
