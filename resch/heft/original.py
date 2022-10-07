@@ -15,24 +15,37 @@ class HEFT:
         # get the mean of all cost from task f to t
         return self.c[f, t].mean()
 
-    @functools.cache
     def rank_task(self, v):
+        return self.rank_u(v)
+
+    @functools.cache
+    def rank_u(self, v):
         w_bar = self.w[v].mean()
-        out_costs = [self.cbar(v, n) + self.rank_task(n) for n in self.g.iter_out_neighbors(v)]
+        out_costs = [self.cbar(v, n) + self.rank_u(n) for n in self.g.iter_out_neighbors(v)]
         return w_bar + max(out_costs, default = 0)
 
-    def start_time(self, v, p):
-        duration = self.w[v, p]
-        edge_finish_times = [self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)]
-        edge_finish_time = max(edge_finish_times, default = 0)
+    @functools.cache
+    def rank_d(self, v):
+        w_bar = lambda v : self.w[v].mean()
+        rank_cost = [self.rank_d(n) + w_bar(n) + self.cbar(v, n) for n in self.g.iter_in_neighbors(v)]
+        return max(rank_cost, default = 0)
 
-        return self.S.earliest_gap(p, edge_finish_time, duration)
+
+    def start_time(self, v, p):
+        return self.S.earliest_gap(p, self.edge_finish_time(v), self.duration(v, p))
+
+    def eft(self, v):
+        return min([(self.finish_time(v, p), p) for p in range(self.w.shape[1])], key = lambda t: t[1])
+
+    def edge_finish_time(self, v):
+        return max([self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)], default = 0)
+
 
     def finish_time(self, v, p):
         t_s = self.start_time(v, p)
         duration = self.w[v, p]
 
-        return t_s + duration;
+        return t_s + duration
 
     def duration(self, v, p):
         return self.w[v, p]
