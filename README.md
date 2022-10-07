@@ -9,8 +9,8 @@ graphs and OR-Tools to generate optimal schedules.
 
 Currently implemented heuristics are:
 
-- [HEFT](resch/heft.py) which is a baseline for scheduling on heterogeneous resources but not specifically designed for
-  FPGAs.
+- [HEFT](resch/original.py), which is a baseline for scheduling on heterogeneous resources but not specifically designed for
+- [CPOP](resch/cpop.py), an algorithm that tries to minimize the CP, also not designed for FPGAs.
 
 ## Example
 
