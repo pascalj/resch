@@ -2,7 +2,10 @@ import graph_tool.all as gt
 from graph_tool import topology
 from resch.task import Task
 from math import sqrt
+import matplotlib as mpl
 import numpy as np
+from os.path import basename
+from os import makedirs
 
 def import_dot(file):
     return gt.load_graph(file, fmt="dot")
@@ -10,6 +13,9 @@ def import_dot(file):
 def load(file):
     """Returns a (g, w, c, t) for a given graph file in GraphML"""
     g = gt.load_graph(file)
+
+    g.gp["title"] = g.new_gp("string")
+    g.gp["title"] = file
 
     cost = g.vp['cost']
     comm = g.ep['comm']
@@ -35,7 +41,13 @@ def load(file):
 
 
 def save(g, file):
+    makedirs(dirname(file), exist_ok = True)
     g.save(file, fmt="graphml")
+
+def save_pdf(g, file):
+    vpr = {"label": g.vp.label}
+    gt.graphviz_draw(g, vcolor=g.vp.type, vcmap=mpl.colormaps['Pastel1'], layout="dot", output="reft.pdf", vnorm=0,vprops=vpr)
+
 
 def generate_simple(num_pes = 2, num_locs = 1):
     nodes = 6
@@ -61,7 +73,69 @@ def generate_simple(num_pes = 2, num_locs = 1):
 
     return g
 
+def generate_lu(num_blocks):
+    g = gt.Graph()
+    g.vp["label"] = g.new_vertex_property("string")
+    g.vp["it"] = g.new_vertex_property("int")
+    g.vp["i"] = g.new_vertex_property("int")
+    g.vp["j"] = g.new_vertex_property("int")
+    g.vp["type"] = g.new_vertex_property("int16_t")
+    g.vp["cost"] = g.new_vertex_property("vector<int>")
+    g.ep["comm"] = g.new_edge_property("vector<int>")
+    tasks = {}
+    
+    def gen_task(it, i, j):
+        v = g.add_vertex()
+        g.vp.label[v] = f'({it},{i},{j})'
+        g.vp.it[v] = it 
+        g.vp.i[v] = i
+        g.vp.j[v] = j
+        g.vp.cost[v] = [80, 60, 100, 100]
+        if it == i:
+            if i == j:
+                g.vp.type[v] = 1 # diag
+            else:
+                g.vp.type[v] = 2 # col
+        elif it == j:
+            g.vp.type[v] = 3 # row
+        else:
+            g.vp.type[v] = 4 # inner
+        tasks[(it, i, j)] = v
+        return v
 
+    def dep(v1, v2):
+        e = g.add_edge(v1, v2)
+        g.ep.comm[e] = [10, 0, 0, 10]
+
+    t = lambda it, i, j: tasks[(it, i, j)]
+
+    for it in range(num_blocks):
+        # dependencies for all inner blocks
+        gen_task(it, it, it)
+            
+        # generate row and column tasks
+        for j in range(it + 1, num_blocks):
+            row = gen_task(it, it, j)
+            col = gen_task(it, j, it)
+            dep(t(it, it, it), row)
+            dep(t(it, it, it), col)
+
+        # generate inner tasks
+        for i in range(it + 1, num_blocks):
+            for j in range(it + 1, num_blocks):
+                inner = gen_task(it, i, j)
+                dep(t(it, i, it), inner)
+                dep(t(it, it, j), inner)
+
+        # wait for all blocks to finish writing (in the previous iteration)
+        if it > 0:
+            for i in range(it, num_blocks):
+                for j in range(it, num_blocks):
+                    dep(t(it - 1, i, j), t(it, i, j))
+
+    return g
+
+    
 
 
 class TaskGraph():

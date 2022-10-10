@@ -1,6 +1,9 @@
 import svgwrite
 from itertools import chain
 from svgwrite import cm,mm
+import matplotlib as mpl
+from os.path import dirname
+from os import makedirs
 
 class Schedule:
     def __init__(self):
@@ -16,7 +19,8 @@ class Schedule:
         return next(iter([t for t in self.tasks if t.index == v]), None)
 
     def earliest_gap(self, p, earliest, duration):
-        p_tasks = list(filter(lambda t: t.pe.index == p, self.tasks))
+        assert(p.index is not None)
+        p_tasks = list(filter(lambda t: t.pe.index == p.index, self.tasks))
         if not p_tasks:
             return earliest
         
@@ -24,7 +28,7 @@ class Schedule:
         win = chain((0,0), p_times[:-1])
         for t1, t2 in zip (win, p_times):
             earliest_start = max(earliest, t2[1])
-            if t2[0] - earliest >= duration:
+            if t2[0] - earliest_start > duration:
                 return earliest_start
 
         return max(p_times[-1][1], earliest)
@@ -46,6 +50,8 @@ class Schedule:
         arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
         dwg.defs.add(arrow)
         dwg.add(dwg.text('time', insert=((width-0.5)*cm, 0.5*cm)))
+        if self.tasks[0].type:
+            cmap = mpl.colormaps["Pastel1"]
 
         if print_locs:
             for loc in locations:
@@ -60,6 +66,7 @@ class Schedule:
                         dwg.add(dwg.text(f'$c_{config.index}$', insert=((left + 0.2)*cm, (top_offset + 0.375)*cm)))
                 top_offset = top_offset + 0.5
         line_top = top_offset
+
 
 
         for config in sorted(m.configurations(), key=lambda c: c.index):
@@ -79,8 +86,10 @@ class Schedule:
                     if task.pe.configuration.index == config.index and task.pe.index == pe.index:
                         left = task.t_s / 50 + left_offset
                         right = task.cost / 50
-                        # dwg.add(dwg.rect(insert=(left*cm, (top_offset+0.5)*cm), size=(right*cm, 0.5*cm), fill='rgb(230,230,230)', stroke='rgb(200,200,200)'))
-                        dwg.add(dwg.rect(insert=(left*cm, (top_offset+0.02)*cm), size=(right*cm, 0.46*cm), stroke='black', fill='white'))
+                        fill = 'white'
+                        if cmap:
+                            fill = mpl.colors.rgb2hex(cmap(task.type))
+                        dwg.add(dwg.rect(insert=(left*cm, (top_offset+0.02)*cm), size=(right*cm, 0.46*cm), stroke='black', fill=fill))
                         dwg.add(dwg.text(task.label, insert=((left + 0.2)*cm, (top_offset + 0.375)*cm)))
                         print("Task %i on PE %i: Start %i, End: %i" % (task_id, pe.index, task.t_s, task.t_f))
                 top_offset = top_offset + 0.5
@@ -88,4 +97,5 @@ class Schedule:
         dwg.add(dwg.line(start=(left_offset*cm, line_top*cm), end=((width)*cm, line_top*cm), stroke='black'))
         dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=((width)*cm, 0.7*cm), stroke='black', marker_end=arrow.get_funciri()))
         dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=(left_offset*cm, height * cm), stroke='black'))
+        makedirs(dirname(path), exist_ok = True)
         dwg.save()

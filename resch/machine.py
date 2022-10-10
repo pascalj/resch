@@ -19,6 +19,7 @@ class PE:
         self.index = index
         self.properties = properties
         self.configuration = configuration
+        self.type = properties.get('p_ft', None)
 
 class MachineModel:
     def __init__(self, PEs):
@@ -35,15 +36,15 @@ def get_pr(num_PEs, num_slots):
     PEs = []
     for pe_id in range(num_PEs):
         config = Configuration(pe_id, locations)
-        PEs.append(PE(pe_id, config, []))
+        PEs.append(PE(pe_id, config, {}))
     return MachineModel(PEs)
 
 def get_r(config_to_PEs):
-    locations = [Location(0)]
+    locations = [Location(0), Location(1)]
     PEs = []
     for config, pes in enumerate(config_to_PEs):
         config = Configuration(config, locations)
         for pe in pes:
-            properties = {'p_ft': pe / 2}
+            properties = {'p_ft': [pe + 1, pe + 2]}
             PEs.append(PE(pe, config, properties))
     return MachineModel(PEs)

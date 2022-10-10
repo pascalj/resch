@@ -4,12 +4,12 @@ import functools
 # w[task, p]
 # c[task, task]
 class HEFT:
-
-    def __init__(self, g, w, c, S = schedule.Schedule()):
+    def __init__(self, g, w, c, m, S = schedule.Schedule()):
         self.g = g
         self.w = w
         self.c = c
         self.S = S
+        self.m = m
 
     def cbar(self, f, t):
         # get the mean of all cost from task f to t
@@ -35,7 +35,7 @@ class HEFT:
         return self.S.earliest_gap(p, self.edge_finish_time(v), self.duration(v, p))
 
     def eft(self, v):
-        return min([(self.finish_time(v, p), p) for p in range(self.w.shape[1])], key = lambda t: t[0])
+        return min([(self.finish_time(v, p), p) for p in self.possible_pes(v)], key = lambda t: t[0])
 
     def edge_finish_time(self, v):
         return max([self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)], default = 0)
@@ -43,26 +43,23 @@ class HEFT:
 
     def finish_time(self, v, p):
         t_s = self.start_time(v, p)
-        duration = self.w[v, p]
 
-        return t_s + duration
+        return t_s + self.duration(v, p)
 
     def duration(self, v, p):
-        return self.w[v, p]
+        return self.w[v, p.index]
 
     def allocate(self, v):
         #minimize EFT for all PEs
-        num_pes = self.w.shape[1]
-
-        f_ts = [(self.finish_time(v, p), p) for p in range(num_pes)]
+        f_ts = [(self.finish_time(v, p), p) for p in self.possible_pes(v)]
         eft = min(f_ts, key = lambda t: t[0])
 
         t_f = eft[0]
         p = eft[1]
         t_s = self.start_time(v, p)
 
-        pe = machine.PE(p, machine.Configuration(0, [0]), [])
-        self.S.add_task(task.ScheduledTask(task.Task(v, v, self.duration(v, p), []), t_s, pe, 0))
+        # pe = machine.PE(p, machine.Configuration(0, [0]), {})
+        self.S.add_task(task.ScheduledTask.from_node(self.g, v, t_s, p, 0))
 
     def schedule(self):
         ordered_tasks = sorted(self.g.get_vertices(), key = lambda v: self.rank_task(v))
@@ -71,7 +68,16 @@ class HEFT:
             self.allocate(t)
 
         return self.S
-    
 
-def build_schedule(g, w, c):
-    return HEFT(g, w, c).schedule()
+    def possible_pes(self, v):
+        ttype = self.g.vp.type[v]
+
+        if ttype is None:
+            return self.m.PEs
+
+        # print([ttype.type for ttype in self.m.PEs])
+        possible = filter(lambda p: ttype in p.type, self.m.PEs)
+        return possible
+
+def build_schedule(g, w, c, m):
+    return HEFT(g, w, c, m).schedule()

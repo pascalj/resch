@@ -2,10 +2,12 @@ from context import resch
 from resch import machine, graph
 from resch.heft import original, reft
 
-(g, w, c) = graph.load("graphs/test.xml")
+import graph_tool.all as gt
+
+(g, w, c) = graph.load("graphs/basic_lu.xml")
 
 mm_r = machine.get_r([range(w.shape[1])])
 
 S = reft.build_schedule(g, w, c, mm_r)
-print([(t.t_s, t.t_f, t.pe.index) for t in S.tasks])
-
+graph.save_pdf(g, "graphs/basic_lu.pdf")
+S.save_svg("schedules/ref_basic_lu.svg", mm_r)
