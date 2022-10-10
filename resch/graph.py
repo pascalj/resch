@@ -4,7 +4,7 @@ from resch.task import Task
 from math import sqrt
 import matplotlib as mpl
 import numpy as np
-from os.path import basename
+from os.path import dirname
 from os import makedirs
 
 def import_dot(file):
@@ -105,7 +105,7 @@ def generate_lu(num_blocks):
 
     def dep(v1, v2):
         e = g.add_edge(v1, v2)
-        g.ep.comm[e] = [10, 0, 0, 10]
+        g.ep.comm[e] = [0, 10, 10, 0]
 
     t = lambda it, i, j: tasks[(it, i, j)]
 
