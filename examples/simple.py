@@ -9,8 +9,4 @@ mm_r = machine.get_r([[0, 1], [2]])
 g = graph.TaskGraph(graph.import_dot("graphs/simple.dot"))
 
 S = optimal.build_schedule(mm_pr, g)
-S.save_svg("simple_pr.svg", mm_pr)
-
 S = optimal.build_schedule(mm_r, g)
-S.save_svg("simple_r.svg", mm_r)
-

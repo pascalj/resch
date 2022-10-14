@@ -19,6 +19,10 @@ class Configuration(IndexEqualityMixin):
     def __init__(self, index, locations):
         self.index = index
         self.locations = locations
+        self.PEs = set()
+
+    def add_pe(self, pe):
+        self.PEs.add(pe)
 
 class Property:
     name = "uninitialized"
@@ -30,6 +34,7 @@ class PE:
         self.properties = properties
         self.configuration = configuration
         self.type = properties.get('p_ft', None)
+        self.configuration.add_pe(self)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
