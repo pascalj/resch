@@ -1,11 +1,21 @@
 from collections import defaultdict
 
-class Location:
+class IndexEqualityMixin(object):
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.index == other.index)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.index))
+
+class Location(IndexEqualityMixin):
     def __init__(self, index):
         self.index = index
 
-
-class Configuration:
+class Configuration(IndexEqualityMixin):
     def __init__(self, index, locations):
         self.index = index
         self.locations = locations
@@ -20,6 +30,14 @@ class PE:
         self.properties = properties
         self.configuration = configuration
         self.type = properties.get('p_ft', None)
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self.index == other.index
+
+    def __hash__(self):
+        return hash((self.index))
 
 class MachineModel:
     def __init__(self, PEs):
@@ -39,6 +57,7 @@ def get_pr(num_PEs, num_slots):
         PEs.append(PE(pe_id, config, {}))
     return MachineModel(PEs)
 
+# Get a non-PR machine with a mapping of config_to_PEs
 def get_r(config_to_PEs):
     locations = [Location(0), Location(1)]
     PEs = []

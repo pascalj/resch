@@ -31,8 +31,8 @@ class HEFT:
         return max(rank_cost, default = 0)
 
 
-    def start_time(self, v, p):
-        return self.S.earliest_gap(p, self.edge_finish_time(v), self.duration(v, p))
+    def start_time(self, v, p, loc = machine.Location(0)):
+        return self.S.earliest_gap(p, loc, self.edge_finish_time(v), self.duration(v, p))
 
     def eft(self, v):
         return min([(self.finish_time(v, p), p) for p in self.possible_pes(v)], key = lambda t: t[0])
@@ -40,9 +40,8 @@ class HEFT:
     def edge_finish_time(self, v):
         return max([self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)], default = 0)
 
-
-    def finish_time(self, v, p):
-        t_s = self.start_time(v, p)
+    def finish_time(self, v, p, loc = machine.Location(0)):
+        t_s = self.start_time(v, p, loc = loc)
 
         return t_s + self.duration(v, p)
 
@@ -58,8 +57,8 @@ class HEFT:
         p = eft[1]
         t_s = self.start_time(v, p)
 
-        # pe = machine.PE(p, machine.Configuration(0, [0]), {})
-        self.S.add_task(task.ScheduledTask.from_node(self.g, v, t_s, p, 0))
+        instance = schedule.Instance(p, machine.Location(0))
+        self.S.add_task(schedule.ScheduledTask.from_node(self.g, v, t_s, instance))
 
     def schedule(self):
         ordered_tasks = sorted(self.g.get_vertices(), key = lambda v: self.rank_task(v))

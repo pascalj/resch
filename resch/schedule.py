@@ -4,6 +4,27 @@ from svgwrite import cm,mm
 import matplotlib as mpl
 from os.path import dirname
 from os import makedirs
+from resch import task
+
+class Instance:
+    def __init__(self, pe, location):
+        self.config = pe.configuration
+        self.pe = pe
+        self.location = location
+
+class ScheduledTask(task.Task):
+    @classmethod
+    def from_node(cls, g, v, t_s, instance):
+        t = task.Task(v, g.vp.label[v], g.vp.cost[v][instance.pe.index], g.get_in_neighbors(v), ttype = g.vp.type[v])
+        return cls(t, t_s, instance)
+
+    def __init__(self, task, t_s, instance):
+        super().__init__(task.index, task.label, task.cost, task.dependencies, ttype = task.type)
+        self.t_s = t_s
+        self.t_f = t_s + self.cost
+        self.pe = instance.pe
+        self.location = instance.location
+        self.instance = instance
 
 class Schedule:
     def __init__(self):
@@ -18,9 +39,9 @@ class Schedule:
     def task(self, v):
         return next(iter([t for t in self.tasks if t.index == v]), None)
 
-    def earliest_gap(self, p, earliest, duration):
+    def earliest_gap(self, p, loc, earliest, duration):
         assert(p.index is not None)
-        p_tasks = list(filter(lambda t: t.pe.index == p.index, self.tasks))
+        p_tasks = list(filter(lambda t: (t.pe.index == p.index) and (loc.index == t.location.index), self.tasks))
         if not p_tasks:
             return earliest
         
@@ -56,7 +77,7 @@ class Schedule:
         d = '$' if LaTeX else  ''
         if print_locs:
             for loc in locations:
-                dwg.add(dwg.text(f'{d}l_{loc}{d}', insert=(0.7*cm, (top_offset+0.35)*cm)))
+                dwg.add(dwg.text(f'{d}l_{loc.index}{d}', insert=(0.7*cm, (top_offset+0.35)*cm)))
                 for task in self.tasks:
                     if task.location == loc:
                         task_id = task.index
