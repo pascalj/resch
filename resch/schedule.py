@@ -37,7 +37,7 @@ class Schedule:
         return max(t.t_f for t in self.tasks)
 
 
-    def save_svg(self, path, m, print_locs = True):
+    def save_svg(self, path, m, print_locs = True, LaTeX=False):
         locations = set([task.location for task in self.tasks])
         configs = set([task.pe.configuration.index for task in self.tasks])
         PEs_count = len(m.PEs)
@@ -53,9 +53,10 @@ class Schedule:
         if self.tasks[0].type:
             cmap = mpl.colormaps["Pastel1"]
 
+        d = '$' if LaTeX else  ''
         if print_locs:
             for loc in locations:
-                dwg.add(dwg.text(f'$l_{loc}$', insert=(0.7*cm, (top_offset+0.35)*cm)))
+                dwg.add(dwg.text(f'{d}l_{loc}{d}', insert=(0.7*cm, (top_offset+0.35)*cm)))
                 for task in self.tasks:
                     if task.location == loc:
                         task_id = task.index
@@ -63,7 +64,7 @@ class Schedule:
                         left = task.t_s / 50 + left_offset
                         right = task.cost / 50
                         dwg.add(dwg.rect(insert=(left*cm, (top_offset)*cm), size=(right*cm, 0.5*cm), fill='rgb(230,230,230)', stroke='rgb(200,200,200)'))
-                        dwg.add(dwg.text(f'$c_{config.index}$', insert=((left + 0.2)*cm, (top_offset + 0.375)*cm)))
+                        dwg.add(dwg.text(f'{d}c_{config.index}{d}', insert=((left + 0.2)*cm, (top_offset + 0.375)*cm)))
                 top_offset = top_offset + 0.5
         line_top = top_offset
 
@@ -71,12 +72,12 @@ class Schedule:
 
         for config in sorted(m.configurations(), key=lambda c: c.index):
             pes = len(set(pe for pe in m.PEs if pe.configuration == config))
-            dwg.add(dwg.text(f'$c_{config.index}$', insert=(0.2*cm, (top_offset+((pes-1)/2*0.5)+0.4)*cm)))
+            dwg.add(dwg.text(f'{d}c_{config.index}{d}', insert=(0.2*cm, (top_offset+((pes-1)/2*0.5)+0.4)*cm)))
             first = True
             for pe in sorted(m.PEs, key=lambda p: p.index):
                 if pe.configuration != config:
                     continue
-                dwg.add(dwg.text(f'$p_{pe.index}$', insert=(0.7*cm, (top_offset+0.35)*cm)))
+                dwg.add(dwg.text(f'{d}p_{pe.index}{d}', insert=(0.7*cm, (top_offset+0.35)*cm)))
                 if first:
                     first = False
                 else:
