@@ -14,7 +14,7 @@ Currently implemented heuristics are:
 
 ## Example
 
-A simple example of its usage is shown in [the examples](examples/heft.py]:
+A simple example of its usage is shown in [the examples](examples/heft.py):
 
 ```python
 g = import_graph(...)

@@ -38,6 +38,7 @@ class HEFT:
         return min([(self.finish_time(v, p), p) for p in self.possible_pes(v)], key = lambda t: t[0])
 
     def edge_finish_time(self, v):
+        # TODO: location
         return max([self.S.task(n).t_f + self.c[n, v, 0, 0] for n in self.g.iter_in_neighbors(v)], default = 0)
 
     def finish_time(self, v, p, loc = machine.Location(0)):
