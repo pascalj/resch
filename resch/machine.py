@@ -54,6 +54,21 @@ class MachineModel:
     def configurations(self):
         return list(set([pe.configuration for pe in self.PEs]))
 
+    def locations(self):
+        locations = set()
+        for config in self.configurations():
+            for loc in config.locations:
+                locations.add(loc)
+        return locations
+
+    def instances(self):
+        instances = []
+        for config in self.configurations():
+            for location in config.locations:
+                for pe in config.PEs:
+                    instances.append(schedule.Instance(pe, location))
+        return instances
+
 def get_pr(num_PEs, num_slots):
     locations = [Location(l_id) for l_id in range(num_slots)]
     PEs = []
