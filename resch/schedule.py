@@ -1,11 +1,13 @@
 from itertools import chain
 from resch import task
+import portion as P
 
 class Instance:
-    def __init__(self, pe, location):
+    def __init__(self, pe, location, interval):
         self.config = pe.configuration
         self.pe = pe
         self.location = location
+        self.interval = interval
 
 class ScheduledTask(task.Task):
     @classmethod
@@ -27,6 +29,7 @@ class Schedule:
 
     def add_task(self, task):
         self.tasks.append(task)
+        self.add_instance(task.instance)
 
     def length(self):
         return max(task.t_s + task.cost for task in self.tasks)
@@ -39,6 +42,8 @@ class Schedule:
         p_tasks = list(filter(lambda t: (t.pe.index == p.index) and (loc.index == t.location.index), self.tasks))
         if not p_tasks:
             return earliest
+
+        # ordered_tasks = sorted([task for task in S.tasks if task.location == l], key = lambda t: t.t_s)
         
         p_times = [(t.t_s, t.t_f) for t in p_tasks]
         win = chain((0,0), p_times[:-1])
@@ -48,6 +53,20 @@ class Schedule:
                 return earliest_start
 
         return max(p_times[-1][1], earliest)
+
+    def add_instance(instance):
+        loc = instance.location
+        loc_instances = [i for i in self.instances if i.location == loc]
+
+
+        # TODO: here
+
+        for l_instance in loc_instances:
+            if l_instance.interval.overlaps(instance.interval):
+                assert(l_instance.config == instance.config)
+                new_interval = l_instance.interval.union(instance.interval)
+                l_instance.interval = new_interval
+
 
     def makespan(self):
         return max(t.t_f for t in self.tasks)

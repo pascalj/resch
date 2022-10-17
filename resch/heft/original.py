@@ -1,5 +1,6 @@
 from resch import schedule, task, machine
 import functools
+import portion as P
 
 # w[task, p]
 # c[task, task]
@@ -58,7 +59,7 @@ class HEFT:
         p = eft[1]
         t_s = self.start_time(v, p)
 
-        instance = schedule.Instance(p, machine.Location(0))
+        instance = schedule.Instance(p, machine.Location(0), P.closed(t_s, t_f))
         self.S.add_task(schedule.ScheduledTask.from_node(self.g, v, t_s, instance))
 
     def schedule(self):
