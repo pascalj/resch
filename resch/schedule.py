@@ -42,9 +42,7 @@ class Schedule:
 
     def earliest_gap(self, p, loc, earliest, duration):
         assert(p.index is not None)
-        p_tasks = list(filter(lambda t: (t.pe.index == p.index) and (loc.index == t.location.index), self.tasks))
-        if not p_tasks:
-            return earliest
+        p_tasks = [t for t in self.tasks if t.pe == p and loc == t.location]
 
         conflict_instances = [i for i in self.instances if i.location == loc and i.config != p.configuration]
 
@@ -60,7 +58,7 @@ class Schedule:
             # is the end still in the same slot?
             if po.singleton(i.lower + duration) <= i:
                 return i.lower
-                
+
         # Should never arrive here, since we're in [earliest, +inf)
         assert(fail)
 

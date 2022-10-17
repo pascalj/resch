@@ -20,7 +20,7 @@ class REFT(original.HEFT):
         l = eft[2]
         t_s = self.start_time(v, p, l)
 
-        interval = po.closed(t_s, t_f)
+        interval = po.closedopen(t_s, t_f)
         instance = schedule.Instance(p, l, interval)
         self.S.add_task(schedule.ScheduledTask.from_node(self.g, v, interval, instance))
 
