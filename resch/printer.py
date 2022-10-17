@@ -78,7 +78,7 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False):
         for task in S.tasks:
             if task.location == loc:
 
-                print("Task %i on PE %i: Start %i, End: %i" % (task.index, task.pe.index, task.t_s, task.t_f))
+                print("Task %i on PE %i@%i: Start %i, End: %i: %s" % (task.index, task.pe.index, task.instance.location.index, task.t_s, task.t_f, task.label))
                 top = i_offset(task.instance) * 0.5
                 left = task.t_s / 50 + left_offset
                 right = task.cost / 50

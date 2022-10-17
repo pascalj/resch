@@ -1,6 +1,7 @@
-from itertools import chain
+from itertools import chain, pairwise
+from functools import reduce
 from resch import task
-import portion as P
+import portion as po
 
 class Instance:
     def __init__(self, pe, location, interval):
@@ -15,17 +16,19 @@ class ScheduledTask(task.Task):
         t = task.Task(v, g.vp.label[v], g.vp.cost[v][instance.pe.index], g.get_in_neighbors(v), ttype = g.vp.type[v])
         return cls(t, t_s, instance)
 
-    def __init__(self, task, t_s, instance):
+    def __init__(self, task, interval, instance):
         super().__init__(task.index, task.label, task.cost, task.dependencies, ttype = task.type)
-        self.t_s = t_s
-        self.t_f = t_s + self.cost
+        self.t_s = interval.lower
+        self.t_f = interval.lower + self.cost
         self.pe = instance.pe
         self.location = instance.location
+        self.interval = interval
         self.instance = instance
 
 class Schedule:
     def __init__(self):
         self.tasks = []
+        self.instances = []
 
     def add_task(self, task):
         self.tasks.append(task)
@@ -43,29 +46,26 @@ class Schedule:
         if not p_tasks:
             return earliest
 
-        # ordered_tasks = sorted([task for task in S.tasks if task.location == l], key = lambda t: t.t_s)
-        
-        p_times = [(t.t_s, t.t_f) for t in p_tasks]
-        win = chain((0,0), p_times[:-1])
-        for t1, t2 in zip (win, p_times):
-            earliest_start = max(earliest, t2[1])
-            if t2[0] - earliest_start > duration:
-                return earliest_start
+        conflict_instances = [i for i in self.instances if i.location == loc and i.config != p.configuration]
 
-        return max(p_times[-1][1], earliest)
+        available = po.closedopen(earliest, po.inf)
 
-    def add_instance(instance):
-        loc = instance.location
-        loc_instances = [i for i in self.instances if i.location == loc]
+        for t in p_tasks:
+            available = available - t.interval
 
+        for i in conflict_instances:
+            available = available - i.interval
+  
+        for i in available:
+            # is the end still in the same slot?
+            if po.singleton(i.lower + duration) <= i:
+                return i.lower
+                
+        # Should never arrive here, since we're in [earliest, +inf)
+        assert(fail)
 
-        # TODO: here
-
-        for l_instance in loc_instances:
-            if l_instance.interval.overlaps(instance.interval):
-                assert(l_instance.config == instance.config)
-                new_interval = l_instance.interval.union(instance.interval)
-                l_instance.interval = new_interval
+    def add_instance(self, instance):
+        self.instances.append(instance)
 
 
     def makespan(self):
