@@ -11,7 +11,7 @@ import colorsys
 
 
 # Just some horrific code to print a schedule to svg
-def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6):
+def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_scale = 30):
     locations = m.locations()
     configs = m.configurations()
     pes = m.PEs
@@ -19,7 +19,7 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6):
     left_offset = 1.2
     top_offset = 0.7
     height = PEs_count * p_height + (len(locations) * print_locs) * p_height + top_offset
-    width = S.length() / 50 + left_offset
+    width = S.length() / y_scale + left_offset
     dwg = svgwrite.Drawing(path, size=((width+p_height)*cm, (height+p_height)*cm))
     arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
     arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
@@ -72,8 +72,8 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6):
 
                 print("Task %i on PE %i(%i)@%i: Start %i, End: %i: %s" % (task.index, task.pe.index, task.pe.configuration.index, task.instance.location.index, task.t_s, task.t_f, task.label))
                 top = i_offset(task.instance) * p_height
-                left = task.t_s / 50 + left_offset
-                right = task.cost / 50
+                left = task.t_s / y_scale + left_offset
+                right = task.cost / y_scale
                 fill = 'white'
                 stroke = 'black'
                 if cmap:
@@ -91,8 +91,8 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6):
 
         for config in configs:
             for i in config_interval(config, loc):
-                left = i.lower / 50 + left_offset
-                right = (i.upper -  i.lower) / 50
+                left = i.lower / y_scale + left_offset
+                right = (i.upper -  i.lower) / y_scale
                 fill = 'white'
                 dwg.add(dwg.line(start=(left*cm, top*cm), end=(left*cm, bottom * cm), stroke='rgb(100,100,100)').dasharray([2, 2]))
                 dwg.add(dwg.rect(insert=(left*cm, top*cm), size=(right*cm, p_height*cm), fill='rgb(230,230,230)', stroke='rgb(160,160,160)'))
