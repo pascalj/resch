@@ -7,23 +7,24 @@ from itertools import accumulate
 from functools import reduce
 from resch import schedule
 import portion as po
+import colorsys
 
 
 # Just some horrific code to print a schedule to svg
-def save_schedule(S, path, m, print_locs = True, LaTeX=False):
+def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6):
     locations = m.locations()
     configs = m.configurations()
     pes = m.PEs
     PEs_count = len(pes)
     left_offset = 1.2
     top_offset = 0.7
-    height = PEs_count * 0.5 + (len(locations) * print_locs) * 0.5 + top_offset
+    height = PEs_count * p_height + (len(locations) * print_locs) * p_height + top_offset
     width = S.length() / 50 + left_offset
-    dwg = svgwrite.Drawing(path, size=((width+0.5)*cm, (height+0.5)*cm))
+    dwg = svgwrite.Drawing(path, size=((width+p_height)*cm, (height+p_height)*cm))
     arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
     arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
     dwg.defs.add(arrow)
-    dwg.add(dwg.text('time', insert=((width-0.5)*cm, 0.5*cm)))
+    dwg.add(dwg.text('time', insert=((width-p_height)*cm, p_height*cm)))
     if S.tasks[0].type:
         cmap = mpl.colormaps["Pastel1"]
 
@@ -58,29 +59,33 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False):
 
     d = '$' if LaTeX else  ''
 
-    total_bottom = (l_offsets[-1] - 1) * 0.5
+    total_bottom = (l_offsets[-1] - 1) * p_height
 
 
     for loc in locations:
-        dwg.add(dwg.rect(insert=(left_offset*cm, l_offset(loc)*0.5*cm), size=((width - left_offset)*cm, 0.5*cm), stroke='none', fill='rgb(250,250,250)'))
-        dwg.add(dwg.text(f'{d}l_{loc.index}{d}', insert=(.3*cm, (l_offset(loc) * 0.5 + 0.39)*cm)))
-        dwg.add(dwg.line(start=(left_offset*cm, (l_offset(loc)*0.5 + 0.5 )*cm), end=(width*cm,  (l_offset(loc)*0.5 + 0.5 )* cm), stroke='rgb(220,220,220)'))
+        dwg.add(dwg.rect(insert=(left_offset*cm, l_offset(loc)*p_height*cm), size=((width - left_offset)*cm, p_height*cm), stroke='none', fill='rgb(250,250,250)'))
+        dwg.add(dwg.text(f'{d}l_{loc.index}{d}', insert=(.3*cm, (l_offset(loc) * p_height + 0.39)*cm)))
+        dwg.add(dwg.line(start=(left_offset*cm, (l_offset(loc)*p_height + p_height )*cm), end=(width*cm,  (l_offset(loc)*p_height + p_height )* cm), stroke='rgb(220,220,220)'))
 
         for task in S.tasks:
             if task.location == loc:
 
                 print("Task %i on PE %i(%i)@%i: Start %i, End: %i: %s" % (task.index, task.pe.index, task.pe.configuration.index, task.instance.location.index, task.t_s, task.t_f, task.label))
-                top = i_offset(task.instance) * 0.5
+                top = i_offset(task.instance) * p_height
                 left = task.t_s / 50 + left_offset
                 right = task.cost / 50
                 fill = 'white'
+                stroke = 'black'
                 if cmap:
                     fill = mpl.colors.rgb2hex(cmap(task.type))
-                dwg.add(dwg.rect(insert=(left*cm, (top+0.02)*cm), size=(right*cm, 0.46*cm), rx=2*px, ry=2*px, fill=fill))
-                dwg.add(dwg.text(task.label, insert=((left + 0.2)*cm, (top + 0.375)*cm)))
+                    r, g, b, a = cmap(task.type)
+                    h, l, s = colorsys.rgb_to_hls(r, g, b)
+                    stroke = mpl.colors.rgb2hex(colorsys.hls_to_rgb(h, min(1, l * 0.8), s = s))
+                dwg.add(dwg.rect(insert=(left*cm, (top+0.02)*cm), size=(right*cm, p_height*cm), rx=3*px, ry=3*px, fill=fill, stroke=stroke))
+                dwg.add(dwg.text(task.label, insert=((left + 0.2)*cm, (top + p_height - 0.125)*cm)))
 
-        top = l_offset(loc) * 0.5
-        bottom = (top + max_pes(loc) * 0.5)
+        top = l_offset(loc) * p_height
+        bottom = p_height + top + max_pes(loc) * p_height
 
         dwg.add(dwg.line(start=(left_offset*cm, top*cm), end=(width*cm, top * cm), stroke='rgb(150,150,150)'))
 
@@ -90,7 +95,7 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False):
                 right = (i.upper -  i.lower) / 50
                 fill = 'white'
                 dwg.add(dwg.line(start=(left*cm, top*cm), end=(left*cm, bottom * cm), stroke='rgb(100,100,100)').dasharray([2, 2]))
-                dwg.add(dwg.rect(insert=(left*cm, top*cm), size=(right*cm, 0.5*cm), fill='rgb(230,230,230)', stroke='rgb(160,160,160)'))
+                dwg.add(dwg.rect(insert=(left*cm, top*cm), size=(right*cm, p_height*cm), fill='rgb(230,230,230)', stroke='rgb(160,160,160)'))
                 dwg.add(dwg.text(f'{d}c_{config.index}{d}', insert=((left + 0.2)*cm, (top + 0.375)*cm)))
             
                 

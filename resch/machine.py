@@ -79,7 +79,7 @@ def get_pr(num_PEs, num_slots):
 
 # Get a non-PR machine with a mapping of config_to_PEs
 def get_r(config_to_PEs):
-    locations = [Location(0)]
+    locations = [Location(0), Location(1)]
     PEs = []
     for config, pes in enumerate(config_to_PEs):
         config = Configuration(config, locations)
