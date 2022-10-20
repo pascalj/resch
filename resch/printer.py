@@ -11,21 +11,19 @@ import colorsys
 
 
 # Just some horrific code to print a schedule to svg
-def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_scale = 30):
+def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_scale = 30, cmap = None):
     locations = m.locations()
     configs = m.configurations()
     pes = m.PEs
     PEs_count = len(pes)
     left_offset = 1.2
-    top_offset = 0.7
-    height = PEs_count * p_height + (len(locations) * print_locs) * p_height + top_offset
+    height = PEs_count * p_height + (len(locations) * print_locs) * p_height
     width = S.length() / y_scale + left_offset
     dwg = svgwrite.Drawing(path, size=((width+p_height)*cm, (height+p_height)*cm))
     arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
     arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
     dwg.defs.add(arrow)
-    dwg.add(dwg.text('time', insert=((width-p_height)*cm, p_height*cm)))
-    if S.tasks[0].type:
+    if S.tasks[0].type and not cmap:
         cmap = mpl.colormaps["Pastel1"]
 
     max_pes = lambda l : max([len(c.PEs) for c in m.configurations() if l in c.locations])
@@ -99,10 +97,13 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
                 dwg.add(dwg.text(f'{d}c_{config.index}{d}', insert=((left + 0.2)*cm, (top + 0.375)*cm)))
             
                 
-    dwg.add(dwg.line(start=(left_offset*cm, top_offset*cm), end=(left_offset*cm, total_bottom * cm), stroke='black'))
-    dwg.add(dwg.line(start=(left_offset*cm, total_bottom*cm), end=(width*cm, total_bottom * cm), stroke='rgb(150,150,150)'))
+    dwg.add(dwg.line(start=(left_offset*cm, 0*cm), end=(left_offset*cm, total_bottom * cm), stroke='black'))
+    dwg.add(dwg.line(start=(left_offset*cm, total_bottom*cm), end=(width*cm, total_bottom * cm), stroke='black', marker_end=arrow.get_funciri()))
+    # dwg.add(dwg.line(start=(left_offset*cm, total_bottom*cm), end=(width*cm, total_bottom * cm), stroke='rgb(150,150,150)'))
+    dwg.add(dwg.text('time', insert=((width - 1)*cm, (0.5 + total_bottom)*cm)))
     # dwg.add(dwg.line(start=(left_offset*cm, line_top*cm), end=((width)*cm, line_top*cm), stroke='black'))
     # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=((width)*cm, 0.7*cm), stroke='black', marker_end=arrow.get_funciri()))
     # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=(left_offset*cm, height * cm), stroke='black'))
-    makedirs(dirname(path), exist_ok = True)
+    if dirname(path):
+        makedirs(dirname(path), exist_ok = True)
     dwg.save()
