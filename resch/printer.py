@@ -8,10 +8,11 @@ from functools import reduce
 from resch import schedule
 import portion as po
 import colorsys
+from sys import stderr
 
 
 # Just some horrific code to print a schedule to svg
-def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_scale = 30, cmap = None):
+def save_schedule(S, file, m, print_locs = True, LaTeX=False, p_height = 0.6, y_scale = 30, cmap = None):
     locations = m.locations()
     configs = m.configurations()
     pes = m.PEs
@@ -19,10 +20,6 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
     left_offset = 1.2
     height = PEs_count * p_height + (len(locations) * print_locs) * p_height
     width = S.length() / y_scale + left_offset
-    dwg = svgwrite.Drawing(path, size=((width+p_height)*cm, (height+p_height)*cm))
-    arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
-    arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
-    dwg.defs.add(arrow)
     if S.tasks[0].type and not cmap:
         cmap = mpl.colormaps["Pastel1"]
 
@@ -59,6 +56,10 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
 
     total_bottom = (l_offsets[-1] - 1) * p_height
 
+    dwg = svgwrite.Drawing(size=((width+0.2)*cm, (total_bottom + 0.5) * cm))
+    arrow = dwg.marker(id='arrow', insert=(0, 3), size=(10, 10), orient='auto', markerUnits='strokeWidth')
+    arrow.add(dwg.path(d='M0,0 L0,6 L9,3 z', fill='#000'))
+    dwg.defs.add(arrow)
 
     for loc in locations:
         dwg.add(dwg.rect(insert=(left_offset*cm, l_offset(loc)*p_height*cm), size=((width - left_offset)*cm, p_height*cm), stroke='none', fill='rgb(250,250,250)'))
@@ -68,7 +69,7 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
         for task in S.tasks:
             if task.location == loc:
 
-                print("Task %i on PE %i(%i)@%i: Start %i, End: %i: %s" % (task.index, task.pe.index, task.pe.configuration.index, task.instance.location.index, task.t_s, task.t_f, task.label))
+                print("Task %i on PE %i(%i)@%i: Start %i, End: %i: %s" % (task.index, task.pe.index, task.pe.configuration.index, task.instance.location.index, task.t_s, task.t_f, task.label), file=stderr)
                 top = i_offset(task.instance) * p_height
                 left = task.t_s / y_scale + left_offset
                 right = task.cost / y_scale
@@ -104,6 +105,6 @@ def save_schedule(S, path, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
     # dwg.add(dwg.line(start=(left_offset*cm, line_top*cm), end=((width)*cm, line_top*cm), stroke='black'))
     # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=((width)*cm, 0.7*cm), stroke='black', marker_end=arrow.get_funciri()))
     # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=(left_offset*cm, height * cm), stroke='black'))
-    if dirname(path):
-        makedirs(dirname(path), exist_ok = True)
-    dwg.save()
+    # if dirname(path):
+    #     makedirs(dirname(path), exist_ok = True)
+    dwg.write(file)
