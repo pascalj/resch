@@ -7,6 +7,11 @@ class REFT(original.HEFT):
         rank = super().rank_task(v)
         return rank
 
+    def finish_time(self, v, p, loc = machine.Location(0)):
+        t_s = self.start_time(v, p, loc = loc)
+
+        return t_s + self.duration(v, p)
+
     def allocate(self, v):
         #minimize EFT for all PEs
         f_ts = []

@@ -59,7 +59,7 @@ class HEFT:
         p = eft[1]
         t_s = self.start_time(v, p)
 
-        instance = schedule.Instance(p, machine.Location(0), P.closed(t_s, t_f))
+        instance = schedule.Instance(p, machine.Location(0), P.closedopen(t_s, t_f))
         self.S.add_task(schedule.ScheduledTask.from_node(self.g, v, t_s, instance))
 
     def schedule(self):

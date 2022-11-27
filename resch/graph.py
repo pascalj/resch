@@ -1,4 +1,4 @@
-import graph_tool.all as gt
+from graph_tool import load_graph, Graph
 from graph_tool import topology
 from resch.task import Task
 from math import sqrt
@@ -12,7 +12,7 @@ def import_dot(file):
 
 def load(file):
     """Returns a (g, w, c, t) for a given graph file in GraphML"""
-    g = gt.load_graph(file)
+    g = load_graph(file)
 
     g.gp["title"] = g.new_gp("string")
     g.gp["title"] = file
@@ -46,7 +46,7 @@ def save(g, file):
 
 def save_pdf(g, file):
     vpr = {"label": g.vp.label}
-    gt.graphviz_draw(g, vcolor=g.vp.type, vcmap=mpl.colormaps['Pastel1'], layout="dot", output="reft.pdf", vnorm=0,vprops=vpr)
+    # gt.graphviz_draw(g, vcolor=g.vp.type, vcmap=mpl.colormaps['Pastel1'], layout="dot", output="reft.pdf", vnorm=0,vprops=vpr)
 
 
 def generate_simple(num_pes = 2, num_locs = 1):
