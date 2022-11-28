@@ -43,11 +43,16 @@ class Schedule:
     def earliest_gap(self, p, loc, earliest, duration):
         assert(p.index is not None)
 
-        l_c = loc.properties.get('p_c', 0)
+        l_c = loc.properties.get('c', 0)
 
         p_tasks = [t for t in self.tasks if t.pe == p and loc == t.location]
 
         conflict_instances = [i for i in self.instances if i.location == loc and i.config != p.configuration]
+
+        # insert conflict here
+        p_c = p.properties.get('c', [])
+        p_s = p.properties.get('s', 0)
+        conflict_tasks = [t for t in self.tasks if t.pe in p_c]
 
         available = po.closedopen(earliest, po.inf)
 
@@ -57,11 +62,14 @@ class Schedule:
         for i in conflict_instances:
             reconf_interval = i.interval.replace(upper=lambda x: x + l_c)
             available = available - reconf_interval
+
+        for i in conflict_tasks:
+            available = available - i.interval
   
         for i in available:
             # is the end still in the same slot?
-            if po.singleton(i.lower + duration) <= i:
-                return i.lower
+            if po.singleton(i.lower + p_s + duration) <= i:
+                return i.lower + p_s
 
         # Should never arrive here, since we're in [earliest, +inf)
         assert(fail)

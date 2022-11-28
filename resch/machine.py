@@ -25,16 +25,12 @@ class Configuration(IndexEqualityMixin):
     def add_pe(self, pe):
         self.PEs.add(pe)
 
-class Property:
-    name = "uninitialized"
-    value = False
-
 class PE:
     def __init__(self, index, configuration, properties = {}):
         self.index = index
         self.properties = properties
         self.configuration = configuration
-        self.type = properties.get('p_ft', None)
+        self.type = properties.get('t', None)
         self.configuration.add_pe(self)
 
     def __eq__(self, other):
@@ -80,11 +76,13 @@ def get_pr(num_PEs, num_slots):
 
 # Get a non-PR machine with a mapping of config_to_PEs
 def get_r(config_to_PEs, locs = [0]):
-    locations = [Location(l, {'p_c': 15}) for l in locs]
+    locations = [Location(l, {'c': 15}) for l in locs]
     PEs = []
     for config, pes in enumerate(config_to_PEs):
         config = Configuration(config, locations)
         for pe in pes:
-            properties = {'p_ft': [pe + 1, pe + 2]}
+            properties = {'t': [pe + 1, pe + 2]}
+            if pe == 0:
+                properties['s'] = 25
             PEs.append(PE(pe, config, properties))
     return MachineModel(PEs)
