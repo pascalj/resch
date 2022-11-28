@@ -12,11 +12,12 @@ class IndexEqualityMixin(object):
         return hash((self.index))
 
 class Location(IndexEqualityMixin):
-    def __init__(self, index):
+    def __init__(self, index, properties = {}):
         self.index = index
+        self.properties = properties
 
 class Configuration(IndexEqualityMixin):
-    def __init__(self, index, locations):
+    def __init__(self, index, locations, properties = {}):
         self.index = index
         self.locations = locations
         self.PEs = set()
@@ -29,7 +30,7 @@ class Property:
     value = False
 
 class PE:
-    def __init__(self, index, configuration, properties):
+    def __init__(self, index, configuration, properties = {}):
         self.index = index
         self.properties = properties
         self.configuration = configuration
@@ -79,7 +80,7 @@ def get_pr(num_PEs, num_slots):
 
 # Get a non-PR machine with a mapping of config_to_PEs
 def get_r(config_to_PEs, locs = [0]):
-    locations = [Location(l) for l in locs]
+    locations = [Location(l, {'p_c': 15}) for l in locs]
     PEs = []
     for config, pes in enumerate(config_to_PEs):
         config = Configuration(config, locations)

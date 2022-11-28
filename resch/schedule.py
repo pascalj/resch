@@ -42,6 +42,9 @@ class Schedule:
 
     def earliest_gap(self, p, loc, earliest, duration):
         assert(p.index is not None)
+
+        l_c = loc.properties.get('p_c', 0)
+
         p_tasks = [t for t in self.tasks if t.pe == p and loc == t.location]
 
         conflict_instances = [i for i in self.instances if i.location == loc and i.config != p.configuration]
@@ -52,7 +55,8 @@ class Schedule:
             available = available - t.interval
 
         for i in conflict_instances:
-            available = available - i.interval
+            reconf_interval = i.interval.replace(upper=lambda x: x + l_c)
+            available = available - reconf_interval
   
         for i in available:
             # is the end still in the same slot?
