@@ -29,6 +29,14 @@ class REFT(original.HEFT):
         instance = schedule.Instance(p, l, interval)
         self.S.add_task(schedule.ScheduledTask.from_node(self.g, v, interval, instance))
 
+    # A number representing the probability from having to add reconfiguration overhead between two tasks
+    def presure(self, v0, v1):
+        v0_pes = possible_pes(v0)
+        v1_pes = possible_pes(v1)
+
+        # TODO here!
+        return 0
+
 
 
 
