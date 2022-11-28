@@ -75,14 +75,11 @@ def get_pr(num_PEs, num_slots):
     return MachineModel(PEs)
 
 # Get a non-PR machine with a mapping of config_to_PEs
-def get_r(config_to_PEs, locs = [0]):
-    locations = [Location(l, {'c': 15}) for l in locs]
+def get_r(config_to_PEs, locs = [0], rho = 0):
+    locations = [Location(l, {'c': rho}) for l in locs]
     PEs = []
     for config, pes in enumerate(config_to_PEs):
         config = Configuration(config, locations)
         for pe in pes:
-            properties = {'t': [pe + 1, pe + 2]}
-            if pe == 0:
-                properties['s'] = 25
-            PEs.append(PE(pe, config, properties))
+            PEs.append(PE(pe, config))
     return MachineModel(PEs)
