@@ -1,5 +1,5 @@
 from graph_tool import load_graph, Graph
-from graph_tool import topology
+from graph_tool import topology, draw
 from resch.task import Task
 from math import sqrt
 import matplotlib as mpl
@@ -46,7 +46,7 @@ def save(g, file):
 
 def save_pdf(g, file):
     vpr = {"label": g.vp.label}
-    # gt.graphviz_draw(g, vcolor=g.vp.type, vcmap=mpl.colormaps['Pastel1'], layout="dot", output="reft.pdf", vnorm=0,vprops=vpr)
+    draw.graphviz_draw(g, vcolor=g.vp.type, vcmap=mpl.colormaps['Pastel1'], layout="dot", output="reft.pdf", vnorm=0,vprops=vpr)
 
 
 def generate_simple(num_pes = 2, num_locs = 1):

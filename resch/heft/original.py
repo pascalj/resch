@@ -76,7 +76,7 @@ class HEFT:
         if ttype is None:
             return self.m.PEs
 
-        possible = filter(lambda p: p.type == None or ttype in p.type, self.m.PEs)
+        possible = filter(lambda p: p.type == None or ttype == p.type, self.m.PEs)
         return possible
 
 def build_schedule(g, w, c, m):
