@@ -1,6 +1,6 @@
 from graph_tool import load_graph, Graph
 from graph_tool import topology, draw
-from resch.task import Task
+from task import Task
 from math import sqrt
 import matplotlib as mpl
 import numpy as np

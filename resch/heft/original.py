@@ -1,15 +1,15 @@
-from resch import schedule, task, machine
+import schedule, task, machine
 import functools
 import portion as P
 
 # w[task, p]
 # c[task, task]
 class HEFT:
-    def __init__(self, g, w, c, m, S = schedule.Schedule()):
+    def __init__(self, g, w, c, m):
         self.g = g
         self.w = w
         self.c = c
-        self.S = S
+        self.S = schedule.Schedule()
         self.m = m
 
     def cbar(self, f, t):

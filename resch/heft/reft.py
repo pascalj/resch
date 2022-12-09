@@ -1,5 +1,5 @@
-from resch import schedule, machine
-from resch.heft import original
+import schedule, machine
+from . import original
 import functools
 import portion as po
 
@@ -16,7 +16,7 @@ class REFT(original.HEFT):
     @functools.cache
     def rank_u(self, v):
         w_bar = self.w[v].mean()
-        out_costs = [self.cbar(v, n) + self.rank_u(n) - self.pressure(v, n) for n in self.g.iter_out_neighbors(v)]
+        out_costs = [self.cbar(v, n) + self.rank_u(n)  for n in self.g.iter_out_neighbors(v)]
         return w_bar + max(out_costs, default = 0)
 
     def allocate(self, v):

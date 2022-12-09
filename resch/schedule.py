@@ -1,6 +1,6 @@
 from itertools import chain, pairwise
 from functools import reduce
-from resch import task
+import task
 import portion as po
 
 class Instance:
