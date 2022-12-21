@@ -97,16 +97,8 @@ class GA:
             return 1.0/S.length()
 
         varbound = range(n)
-        algorithm_param = {'max_num_iteration': 100,\
-                   'population_size':10,\
-                   # 'mutation_probability_':0.1,\
-                   'elit_ratio': 0.01,\
-                   'crossover_probability': 0.5,\
-                   'parents_portion': 0.3,\
-                   'crossover_type':'uniform',\
-                   'max_iteration_without_improv':None}
 
-        model = pygad.GA(num_generations = 10, num_parents_mating = 4, fitness_func=fitness, sol_per_pop=5, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=varbound, save_solutions=True,parent_selection_type="rank", save_best_solutions=True)
+        model = pygad.GA(num_generations = 10, num_parents_mating = 2, fitness_func=fitness, sol_per_pop=5, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=varbound, save_solutions=True,parent_selection_type="rank", save_best_solutions=True)
         
         model.run()
 

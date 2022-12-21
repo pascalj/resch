@@ -9,6 +9,7 @@ import schedule
 import portion as po
 import colorsys
 from sys import stderr
+import graphviz as gv
 
 
 # Just some horrific code to print a schedule to svg
@@ -100,11 +101,8 @@ def save_schedule(S, file, m, print_locs = True, LaTeX=False, p_height = 0.6, y_
                 
     dwg.add(dwg.line(start=(left_offset*cm, 0*cm), end=(left_offset*cm, total_bottom * cm), stroke='black'))
     dwg.add(dwg.line(start=(left_offset*cm, total_bottom*cm), end=(width*cm, total_bottom * cm), stroke='black', marker_end=arrow.get_funciri()))
-    # dwg.add(dwg.line(start=(left_offset*cm, total_bottom*cm), end=(width*cm, total_bottom * cm), stroke='rgb(150,150,150)'))
     dwg.add(dwg.text('time', insert=((width - 1)*cm, (0.5 + total_bottom)*cm)))
-    # dwg.add(dwg.line(start=(left_offset*cm, line_top*cm), end=((width)*cm, line_top*cm), stroke='black'))
-    # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=((width)*cm, 0.7*cm), stroke='black', marker_end=arrow.get_funciri()))
-    # dwg.add(dwg.line(start=(left_offset*cm, 0.7*cm), end=(left_offset*cm, height * cm), stroke='black'))
-    # if dirname(path):
-    #     makedirs(dirname(path), exist_ok = True)
     dwg.write(file)
+
+
+
