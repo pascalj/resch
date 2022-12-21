@@ -1,0 +1,9 @@
+absl-py==1.3.0
+func-timeout==4.3.5
+geneticalgorithm==1.0.2
+numpy==1.23.5
+ortools==9.5.2237
+portion==2.3.0
+protobuf==4.21.11
+sortedcontainers==2.4.0
+svgwrite==1.4.3
