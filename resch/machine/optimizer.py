@@ -1,6 +1,6 @@
 import numpy as np
 from geneticalgorithm import geneticalgorithm as ga
-import machine, printer, graph, heft.reft
+from .. import machine, printer, graph, heft.reft
 from collections import defaultdict
 import pygad
 

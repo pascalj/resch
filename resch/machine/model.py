@@ -41,6 +41,8 @@ class PE:
     def __hash__(self):
         return hash((self.index))
 
+
+# TODO: rename to Model
 class MachineModel:
     def __init__(self, PEs):
         self.PEs = PEs

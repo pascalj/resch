@@ -5,6 +5,3 @@ class Task:
         self.cost = cost
         self.dependencies = dependencies
         self.type = ttype
-        
-
-
