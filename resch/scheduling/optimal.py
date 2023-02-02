@@ -3,8 +3,7 @@ import random
 from ortools.sat.python import cp_model
 
 import svgwrite
-from resch import schedule
-from resch import task as t
+from resch import scheduling
 
 PEs_count = 3
 
@@ -81,14 +80,14 @@ def build_schedule(m, g):
     status = solver.Solve(model)
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
 
-        S = schedule.Schedule()
+        S = scheduling.Schedule()
         for task in g.tasks:
             for pe in m.PEs:
                 interval = intervals[(task.index, pe.index)]
                 if solver.Value(interval.mapped):
                     t_s = solver.Value(interval.start)
                     location = solver.Value(interval.location)
-                    task = t.ScheduledTask(g.tasks[task.index], t_s, pe, location)
+                    task = scheduling.ScheduledTask(g.tasks[task.index], t_s, pe, location)
                     S.add_task(task)
 
         return S

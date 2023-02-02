@@ -5,7 +5,6 @@ from os.path import dirname
 from os import makedirs
 from itertools import accumulate
 from functools import reduce
-import schedule
 import portion as po
 import colorsys
 from sys import stderr

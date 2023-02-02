@@ -1,6 +1,5 @@
 from itertools import chain, pairwise
 from functools import reduce
-import task
 import portion as po
 
 class Instance:
@@ -10,11 +9,6 @@ class Instance:
         self.location = location
         self.interval = interval
 
-class ScheduledTask(task.Task):
-    @classmethod
-    def from_node(cls, g, v, t_s, instance):
-        t = task.Task(v, g.vp.label[v], g.vp.cost[v][instance.pe.index], g.get_in_neighbors(v), ttype = g.vp.type[v])
-        return cls(t, t_s, instance)
 
     def __init__(self, task, interval, instance):
         super().__init__(task.index, task.label, task.cost, task.dependencies, ttype = task.type)
@@ -35,7 +29,7 @@ class Schedule:
         self.add_instance(task.instance)
 
     def length(self):
-        return max(task.t_s + task.cost for task in self.tasks)
+        return max([task.t_s + task.cost for task in self.tasks], default=0)
 
     def task(self, v):
         return next(iter([t for t in self.tasks if t.index == v]), None)
@@ -76,8 +70,3 @@ class Schedule:
 
     def add_instance(self, instance):
         self.instances.append(instance)
-
-
-    def makespan(self):
-        return max(t.t_f for t in self.tasks)
-
