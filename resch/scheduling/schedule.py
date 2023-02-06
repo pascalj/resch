@@ -9,16 +9,6 @@ class Instance:
         self.location = location
         self.interval = interval
 
-
-    def __init__(self, task, interval, instance):
-        super().__init__(task.index, task.label, task.cost, task.dependencies, ttype = task.type)
-        self.t_s = interval.lower
-        self.t_f = interval.lower + self.cost
-        self.pe = instance.pe
-        self.location = instance.location
-        self.interval = interval
-        self.instance = instance
-
 class Schedule:
     def __init__(self):
         self.tasks = []

@@ -1,6 +1,5 @@
 from graph_tool import load_graph, Graph
 from graph_tool import topology, draw
-from task import Task
 from math import sqrt
 import matplotlib as mpl
 import numpy as np
@@ -13,11 +12,14 @@ def import_dot(file):
 def load(file):
     """Returns a (g, w, c, t) for a given graph file in GraphML"""
     g = load_graph(file)
-
     g.gp["title"] = g.new_gp("string")
     g.gp["title"] = file
 
+    return convert_to_taskgraph(g)
+
+def convert_to_taskgraph(g):
     cost = g.vp['cost']
+    t = g.vp['type']
     comm = g.ep['comm']
     num_pes = len(cost[0])
     num_locs = int(sqrt(len(comm[g.edges().next()])))
@@ -35,9 +37,7 @@ def load(file):
             for l_t in range(num_locs):
                 c[f, t, l_f, l_t] = comm[l_f * num_locs + l_t]
 
-        
-
-    return (g, w, c)
+    return (g, w, c, t)
 
 
 def save(g, file):
