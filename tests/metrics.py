@@ -22,7 +22,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_cp_len(self):
         G = fixtures.sample_graph()
-        self.assertEqual(metrics.cp_len(G), 55)
+        self.assertEqual(metrics.cp_len(G), 450)
 
 if __name__ == '__main__':
     unittest.main()

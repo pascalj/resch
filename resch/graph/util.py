@@ -1,6 +1,7 @@
-from graph_tool import load_graph, Graph
+from graph_tool import load_graph
 from graph_tool import topology, draw
 from math import sqrt
+from resch import graph
 import matplotlib as mpl
 import numpy as np
 from os.path import dirname
@@ -15,30 +16,7 @@ def load(file):
     g.gp["title"] = g.new_gp("string")
     g.gp["title"] = file
 
-    return convert_to_taskgraph(g)
-
-def convert_to_taskgraph(g):
-    cost = g.vp['cost']
-    t = g.vp['type']
-    comm = g.ep['comm']
-    num_pes = len(cost[0])
-    num_locs = int(sqrt(len(comm[g.edges().next()])))
-
-    w = np.zeros((g.num_vertices(), num_pes))
-
-    for p in range(num_pes):
-        for v in g.iter_vertices():
-            w[v, p] = cost[v][p]
-
-    c = np.zeros((g.num_vertices(), g.num_vertices(), num_locs, num_locs))
-
-    for f, t, comm in g.iter_edges([g.ep['comm']]):
-        for l_f in range(num_locs):
-            for l_t in range(num_locs):
-                c[f, t, l_f, l_t] = comm[l_f * num_locs + l_t]
-
-    return (g, w, c, t)
-
+    return graph.TaskGraph(g)
 
 def save(g, file):
     makedirs(dirname(file), exist_ok = True)

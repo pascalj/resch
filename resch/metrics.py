@@ -23,5 +23,4 @@ G : (g, w, c, t)
 """
 
 def cp_len(G):
-
     return G.cp_len()

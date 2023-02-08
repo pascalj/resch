@@ -32,10 +32,7 @@ def schedule_with_len(slen):
 
 def empty_graph():
     g = Graph()
-    w = np.zeros((0,0))
-    c = np.zeros((0,0,0,0))
-    t = np.zeros((0))
-    return (g, w, c, t)
+    return graph.TaskGraph(g)
 
 def sample_graph():
     return graph.load("tests/fixtures/sample.xml")
