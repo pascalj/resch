@@ -13,9 +13,11 @@ G : TaskGraph
 """
 
 def slr(S, G):
-    S
+    return makespan(S) / sum(G.min_p(v)[1] for (v, e) in G.cp())
 
-    return makespan(S) / cp_len(G)
+def slack(S, G):
+    slen = makespan(S)
+    return sum(slen - G.rank_u(v) - G.rank_d(v) for v in G.nodes()) / G.num_nodes()
 
 """ Length of the critical Path of G
 
@@ -24,3 +26,4 @@ G : (g, w, c, t)
 
 def cp_len(G):
     return G.cp_len()
+

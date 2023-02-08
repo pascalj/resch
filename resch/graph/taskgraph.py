@@ -13,6 +13,7 @@ class TaskGraph:
         self.t = t
         self.w_bar = self.w.mean(axis=1)
         self.c_bar = self.c.mean(axis=(2,3))
+        self.w_min = np.argmin(self.w, axis=1)
         self.init_maps()
 
     def init_maps(self):
@@ -52,6 +53,25 @@ class TaskGraph:
             c = np.zeros((g.num_vertices(), g.num_vertices(), 1, 1))
         return (g, w, c, t)
 
+    def nodes(self):
+        return self.g.get_vertices()
+
+    def num_nodes(self):
+        return self.g.num_vertices()
+
+    """ Path length with w """
+
+    def path_len(self, path, weights=None):
+        if weights is None:
+            weights = self.inclusive_cost_map()
+        return sum(weights[e] for e in path)
+
+    """ Returns the index of the PE that has the minimal execution cost and its value """
+
+    def min_p(self, v):
+        v = self.g.vertex_index[v]
+        return (self.w_min[v], self.w[v, self.w_min[v]])
+
     """ Length of the critical path in terms of w and c """
 
     def cp_len(self, weights=None):
@@ -62,9 +82,7 @@ class TaskGraph:
         if weights is None:
             weights = self.inclusive_cost_map()
 
-        cp = self.cp(weights=weights)
-
-        return sum(weights[e] for e in cp)
+        return self.path_len(self.cp(weights=weights), weights=weights)
 
     """ Returns the edge list of the critical path """
 

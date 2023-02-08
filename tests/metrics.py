@@ -16,6 +16,16 @@ class TestMetrics(unittest.TestCase):
         S = fixtures.schedule_with_len(slen)
         self.assertEqual(metrics.makespan(S), slen)
 
+    def test_slr(self):
+        S = fixtures.schedule_with_len(900)
+        G = fixtures.sample_graph()
+        self.assertEqual(metrics.slr(S, G), 3)
+
+    def test_slack(self):
+        S = fixtures.schedule_with_len(800)
+        G = fixtures.sample_graph()
+        self.assertIsInstance(metrics.slack(S, G), float)
+
     def test_cp_len_with_empty_graph(self):
         G = fixtures.empty_graph()
         self.assertEqual(metrics.cp_len(G), 0)
