@@ -2,6 +2,7 @@ import numpy as np
 import pdb
 from math import sqrt
 from graph_tool.topology import topological_sort, shortest_path
+from functools import cache
  
 class TaskGraph:
     def __init__(self, g):
@@ -12,6 +13,11 @@ class TaskGraph:
         self.t = t
         self.w_bar = self.w.mean(axis=1)
         self.c_bar = self.c.mean(axis=(2,3))
+        self.init_maps()
+
+    def init_maps(self):
+        self.g.vp["rank_u"] = self.g.new_vertex_property('int32_t')
+        self.g.vp["rank_d"] = self.g.new_vertex_property('int32_t')
 
     def from_graph(self, g):
         if 'cost' in g.vp:
@@ -54,7 +60,7 @@ class TaskGraph:
             return 0;
 
         if weights is None:
-            weights = self.urank_map()
+            weights = self.inclusive_cost_map()
 
         cp = self.cp(weights=weights)
 
@@ -67,7 +73,7 @@ class TaskGraph:
         last = self.exit_node()
 
         if weights is None:
-            weights = self.urank_map()
+            weights = self.inclusive_cost_map()
 
         nodes, edges = shortest_path(self.g, source=self.entry_node(), target=self.exit_node(), weights=weights)
 
@@ -84,14 +90,42 @@ class TaskGraph:
         sort = topological_sort(self.g)
         return self.g.vertex(sort[-1])
 
-    """ Returns an edge property map with the upper rank computed"""
+    """ Returns an edge property map with computing cost included
 
-    def urank_map(self):
+        The cost are calculated based on w_bar and c_bar. The cost for each
+        edge (f, t) is w_bar(f) + c_bar(f, t).
+    """
+
+    def inclusive_cost_map(self):
         # Accumulated cost (source node weight + edge weight)
         g = self.g
-        weight_map = g.new_edge_property("int32_t", np.iinfo(np.int32).max)
-        for v, v_idx in g.iter_vertices([g.vertex_index]):
-           for f, t, e_idx, cost in g.iter_out_edges(v, [g.edge_index, g.ep['comm']]):
-               res = self.w_bar[v_idx] + self.c_bar[f][t]
-               weight_map[g.edge(f, t)] = res
-        return weight_map
+        if "inclusive_cost" not in g.ep:
+            weight_map = g.new_edge_property("int32_t", np.iinfo(np.int32).max)
+            for v, v_idx in g.iter_vertices([g.vertex_index]):
+               for f, t, e_idx, cost in g.iter_out_edges(v, [g.edge_index, g.ep['comm']]):
+                   res = self.w_bar[v_idx] + self.c_bar[f][t]
+                   weight_map[g.edge(f, t)] = res
+            g.ep["inclusive_cost"] = weight_map
+
+        return g.ep["inclusive_cost"]
+
+    """ Get the upper rank of node v """
+
+    @cache
+    def rank_u(self, v):
+        value = self.w_bar[v] + max(
+                [self.c_bar[v][w] + self.rank_u(w) for w in self.g.get_out_neighbors(v)],
+                default=0)
+        self.g.vp['rank_u'][v] = value
+        return value
+
+    """ Get the downwards rank of node v """
+
+    @cache
+    def rank_d(self, v):
+        value = max(
+                    [self.rank_d(w) + self.w_bar[w] + self.c_bar[v][w] for w in self.g.get_in_neighbors(v)],
+                    default=0)
+        self.g.vp['rank_d'][v] = value
+        return value
+
