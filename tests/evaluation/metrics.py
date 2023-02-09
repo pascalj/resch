@@ -34,5 +34,14 @@ class TestMetrics(unittest.TestCase):
         G = fixtures.sample_graph()
         self.assertEqual(metrics.cp_len(G), 450)
 
+    def test_sequential(self):
+        G = fixtures.sample_graph()
+        self.assertEqual(metrics.sequential(G), 2550)
+
+    def test_speedup(self):
+        S = fixtures.schedule_with_len(1000)
+        G = fixtures.sample_graph()
+        self.assertEqual(metrics.speedup(S, G), 2.55)
+
 if __name__ == '__main__':
     unittest.main()
