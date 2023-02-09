@@ -54,27 +54,29 @@ class TaskGraph:
         return (g, w, c, t)
 
     def nodes(self):
+        """ Array of nodes """
         return self.g.get_vertices()
 
     def num_nodes(self):
+        """ Number of total nodes """
         return self.g.num_vertices()
 
-    """ Path length with w """
-
     def path_len(self, path, weights=None):
+        """ Path length with w """
+
         if weights is None:
             weights = self.inclusive_cost_map()
         return sum(weights[e] for e in path)
 
-    """ Returns the index of the PE that has the minimal execution cost and its value """
-
     def min_p(self, v):
+        """ Returns the index of the PE that has the minimal execution cost and its value """
+
         v = self.g.vertex_index[v]
         return (self.w_min[v], self.w[v, self.w_min[v]])
 
-    """ Length of the critical path in terms of w and c """
-
     def cp_len(self, weights=None):
+        """ Length of the critical path in terms of w and c """
+
         g = self.g
         if g.num_vertices() == 0:
             return 0;
@@ -84,9 +86,9 @@ class TaskGraph:
 
         return self.path_len(self.cp(weights=weights), weights=weights)
 
-    """ Returns the edge list of the critical path """
 
     def cp(self, weights=None):
+        """ Returns the edge list of the critical path """
         first = self.entry_node()
         last = self.exit_node()
 
@@ -97,24 +99,25 @@ class TaskGraph:
 
         return edges
 
-    """ The entry node (a node without in dependencies) """
 
     def entry_node(self):
+        """ The entry node (a node without in dependencies) """
         sort = topological_sort(self.g)
         return self.g.vertex(sort[0])
 
-    """ The exit node (a node without out dependencies) """
     def exit_node(self):
+        """ The exit node (a node without out dependencies) """
         sort = topological_sort(self.g)
         return self.g.vertex(sort[-1])
 
-    """ Returns an edge property map with computing cost included
-
-        The cost are calculated based on w_bar and c_bar. The cost for each
-        edge (f, t) is w_bar(f) + c_bar(f, t).
-    """
 
     def inclusive_cost_map(self):
+        """ Returns an edge property map with computing cost included
+
+            The cost are calculated based on w_bar and c_bar. The cost for each
+            edge (f, t) is w_bar(f) + c_bar(f, t).
+        """
+
         # Accumulated cost (source node weight + edge weight)
         g = self.g
         if "inclusive_cost" not in g.ep:
@@ -127,20 +130,20 @@ class TaskGraph:
 
         return g.ep["inclusive_cost"]
 
-    """ Get the upper rank of node v """
 
     @cache
     def rank_u(self, v):
+        """ Get the upper rank of node v """
         value = self.w_bar[v] + max(
                 [self.c_bar[v][w] + self.rank_u(w) for w in self.g.get_out_neighbors(v)],
                 default=0)
         self.g.vp['rank_u'][v] = value
         return value
 
-    """ Get the downwards rank of node v """
 
     @cache
     def rank_d(self, v):
+        """ Get the downwards rank of node v """
         value = max(
                     [self.rank_d(w) + self.w_bar[w] + self.c_bar[v][w] for w in self.g.get_in_neighbors(v)],
                     default=0)

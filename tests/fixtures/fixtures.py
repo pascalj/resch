@@ -37,3 +37,4 @@ def empty_graph():
 def sample_graph():
     return graph.load("tests/fixtures/sample.xml")
 
+
