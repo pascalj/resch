@@ -1,5 +1,5 @@
 import numpy as np
-from .metrics import makespan, slr, slack
+from .metrics import speedup, makespan, slr, slack
 
 def machine_benchmark(M, Gs, algo):
     """
@@ -18,6 +18,7 @@ def machine_benchmark(M, Gs, algo):
 
     metrics = np.array([[
         makespan(S),
+        speedup(S, G),
         slr(S, G),
         slack(S, G),
     ] for (S, G) in SGs])
