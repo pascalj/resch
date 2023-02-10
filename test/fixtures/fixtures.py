@@ -35,6 +35,6 @@ def empty_graph():
     return graph.TaskGraph(g)
 
 def sample_graph():
-    return graph.load("tests/fixtures/sample.xml")
+    return graph.load("test/fixtures/sample.xml")
 
 

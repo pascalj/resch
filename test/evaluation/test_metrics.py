@@ -1,10 +1,10 @@
 import unittest
 
-from tests.context import resch
+from test.context import resch
 import resch.scheduling.schedule as schedule
 import resch.evaluation.metrics as metrics
 
-from tests.fixtures import fixtures
+from test.fixtures import fixtures
 
 class TestMetrics(unittest.TestCase):
     def test_makespan_with_empty_schedule(self):

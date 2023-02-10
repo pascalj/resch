@@ -1,10 +1,10 @@
 import unittest
 
-from tests.context import resch
+from test.context import resch
 import resch.scheduling.schedule as schedule
 import resch.evaluation.benchmark as bench
 
-from tests.fixtures import fixtures
+from test.fixtures import fixtures
 
 class TestBenchmark(unittest.TestCase):
     def test_machine_benchmark(self):
