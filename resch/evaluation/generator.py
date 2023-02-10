@@ -1,6 +1,6 @@
 from graph_tool import Graph
 
-def generate_simple(num_pes = 2, num_locs = 1):
+def simple_graph(num_pes = 2, num_locs = 1):
     nodes = 6
     deps = [[], [0], [0], [0,1], [2], [1,3,4]]
 
@@ -24,7 +24,7 @@ def generate_simple(num_pes = 2, num_locs = 1):
 
     return g
 
-def generate_lu(num_blocks):
+def lu_graph(num_blocks):
     g = gt.Graph()
     g.vp["label"] = g.new_vertex_property("string")
     g.vp["it"] = g.new_vertex_property("int")
