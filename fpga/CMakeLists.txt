@@ -7,6 +7,6 @@ add_executable(host host.cpp)
 target_compile_features(host PUBLIC cxx_std_17)
 find_package(OpenCL REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(Boost REQUIRED COMPONENTS graph)
 
-
-target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL)
+target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL Boost::graph)
