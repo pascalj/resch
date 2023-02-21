@@ -9,4 +9,4 @@ find_package(OpenCL REQUIRED)
 find_package(spdlog REQUIRED)
 
 
-target_link_libraries(host PRIVATE spdlog::spdlog OpenCL)
+target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL)
