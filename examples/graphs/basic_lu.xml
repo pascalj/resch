@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
 
   <!-- property keys -->
-  <key id="key0" for="edge" attr.name="comm" attr.type="vector_int" />
-  <key id="key1" for="node" attr.name="cost" attr.type="vector_int" />
+  <key id="key0" for="edge" attr.name="comm" attr.type="string" />
+  <key id="key1" for="node" attr.name="cost" attr.type="string" />
   <key id="key2" for="node" attr.name="i" attr.type="int" />
   <key id="key3" for="node" attr.name="it" attr.type="int" />
   <key id="key4" for="node" attr.name="j" attr.type="int" />
   <key id="key5" for="node" attr.name="label" attr.type="string" />
-  <key id="key6" for="node" attr.name="type" attr.type="short" />
+  <key id="key6" for="node" attr.name="type" attr.type="int" />
 
   <graph id="G" edgedefault="directed" parse.nodeids="canonical" parse.edgeids="canonical" parse.order="nodesfirst">
 

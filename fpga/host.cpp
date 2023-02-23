@@ -1,3 +1,4 @@
+#include "host.h"
 #include "spdlog/spdlog.h"
 #include <algorithm>
 #include <cstdio>
@@ -8,79 +9,20 @@
 #include <vector>
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #include <CL/opencl.hpp>
-#include <boost/align/aligned_allocator.hpp>
 #include <boost/graph/directed_graph.hpp>
 #include <boost/graph/graphml.hpp>
 
 using std::filesystem::path;
 
-// Use a page-aligned vector
-template <typename T>
-using aligned_vector =
-    std::vector<T, boost::alignment::aligned_allocator<T, 4096>>;
-
 using spdlog::info;
-
-size_t offset = 0;
-size_t global = 1;
-size_t local = 1;
-
-// An event callback function that prints the operations performed by the OpenCL
-// runtime.
-
-void event_cb(cl_event event1, cl_int cmd_status, void *data) {
-  cl_int err;
-  cl_command_type command;
-  cl::Event event(event1, true);
-  event.getInfo<cl_command_type>(CL_EVENT_COMMAND_TYPE, &command);
-  cl_int status;
-  event.getInfo<cl_int>(CL_EVENT_COMMAND_EXECUTION_STATUS, &status);
-
-  const char *command_str;
-  const char *status_str;
-  switch (command) {
-  case CL_COMMAND_READ_BUFFER:
-    command_str = "buffer read";
-    break;
-  case CL_COMMAND_WRITE_BUFFER:
-    command_str = "buffer write";
-    break;
-  case CL_COMMAND_NDRANGE_KERNEL:
-    command_str = "kernel";
-    break;
-  }
-  switch (status) {
-  case CL_QUEUED:
-    status_str = "Queued";
-    break;
-  case CL_SUBMITTED:
-    status_str = "Submitted";
-    break;
-  case CL_RUNNING:
-    status_str = "Executing";
-    break;
-  case CL_COMPLETE:
-    status_str = "Completed";
-    break;
-  }
-  printf("%s %s %s\n", status_str, reinterpret_cast<char *>(data), command_str);
-  fflush(stdout);
-}
-
-// Sets the callback for a particular event
-void set_callback(cl::Event event, const char *queue_name) {
-  cl_int err;
-  event.setCallback(CL_COMPLETE, event_cb, (void *)queue_name);
-}
 
 void execute_dag(cl::Context &context, cl::Device &device) {
   cl_int err;
   aligned_vector<cl::Event> ooo_events;
   aligned_vector<cl::Event> kernel_wait_events;
-  cl::CommandQueue ooo_queue(
+  cl::CommandQueue queue(
       context, device,
       CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
-
   const int matrix_scale_factor = 2;
 }
 
@@ -117,7 +59,7 @@ void read_binaries(const path directory, cl::Program::Binaries out,
                    const std::string &extension = ".xclbin") {
   for (auto entry : std::filesystem::directory_iterator{directory}) {
     if (entry.is_regular_file() && entry.path().extension() == extension) {
-      std::ifstream is(entry.path());
+      std::ifstream is(entry.path(), std::ios::binary);
       std::istream_iterator<unsigned char> start(is), end;
       std::vector<unsigned char> binary(start, end);
       out.push_back(std::move(binary));
@@ -128,12 +70,33 @@ void read_binaries(const path directory, cl::Program::Binaries out,
   info("Read {} binaries from {}", out.size(), directory.c_str());
 }
 
-void read_graph(const path &graph_path, boost::directed_graph<> &graph,
+std::string vec2str(std::vector<int>) { return ""; }
+auto str2vec(std::string const &str) -> std::vector<int> {
+  auto number = 0;
+  auto out = str;
+  auto vec = std::vector<int>{};
+  std::transform(str.cbegin(), str.cend(), out.begin(),
+                 [](char ch) { return (ch == ',') ? ' ' : ch; });
+  auto strs = std::stringstream{out};
+  while (strs >> number) {
+    vec.push_back(number);
+  }
+  return vec;
+}
+
+void read_graph(const path &graph_path, Graph &graph,
                 boost::dynamic_properties &properties) {
-  std::ifstream is(graph_path);
+  std::ifstream is(graph_path, std::ios::binary);
+  properties.property("label", boost::get(&Task::label, graph));
+  properties.property(
+      "comm",
+      TranslateStringPMap{boost::get(&Dependency::cost, graph), vec2str, str2vec});
+  properties.property(
+      "cost",
+      TranslateStringPMap{boost::get(&Task::cost, graph), vec2str, str2vec});
   boost::read_graphml(is, graph, properties);
   info("Imported {} with {} vertices and {} edges",
-       graph_path.filename().c_str(), graph.num_vertices(), graph.num_edges());
+       graph_path.filename().c_str(), boost::num_vertices(graph), boost::num_edges(graph));
 }
 
 int main(int argc, char **argv) {
@@ -152,7 +115,7 @@ int main(int argc, char **argv) {
   cl::Program::Binaries bins;
   read_binaries(xlbin_path, bins);
 
-  boost::directed_graph<> graph;
+  Graph graph;
   boost::dynamic_properties properties(boost::ignore_other_properties);
   read_graph(graph_path, graph, properties);
 
