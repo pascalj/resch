@@ -9,4 +9,6 @@ find_package(OpenCL REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(Boost REQUIRED COMPONENTS graph)
 
-target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL Boost::graph)
+target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL Boost::graph )
+target_compile_options(host PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined -fno-omit-frame-pointer>)
+target_link_options(host PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined -fno-omit-frame-pointer>)
