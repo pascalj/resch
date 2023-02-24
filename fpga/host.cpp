@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-
 /**
  * @brief Execute task graphs using OpenCL
  *
@@ -21,56 +20,55 @@
  *
  */
 int main(int argc, char **argv) {
-  using std::filesystem::path;
   using spdlog::info;
+  using std::filesystem::path;
 
   if (argc != 4) {
     usage(argv[0]);
     return EXIT_FAILURE;
   }
 
-  cl::Context context;
-  cl::Platform platform;
-  cl::Device device;
-
-  cl_int err;
-  get_first_device(context, platform, device);
-
-  // Using an out-of-order queue, so we can have true parallelism
-  cl::CommandQueue queue(
-      context, device,
-      CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
-
+  // Paths/arguments
   path graph_path(argv[1]);
   path xlbin_path(argv[2]);
   path schedule_path(argv[3]);
 
+  // Static CL variables
+  cl::Context context;
+  cl::Platform platform;
+  cl::Device device;
+  get_first_device(context, platform, device);
+
+  //Load and initialize graph, schedule and machine model
   Graph graph;
   boost::dynamic_properties properties(boost::ignore_other_properties);
   read_graph(graph_path, graph, properties);
-  assert(num_vertices(graph) > 0);
 
   Schedule schedule;
   read_schedule(schedule_path, graph, schedule);
-  /* assert(schedule.size() == num_vertices(graph)); */
 
   Machine machine;
   read_machine_model(schedule_path, machine);
+  machine.init(context, device, xlbin_path);
 
-  for(auto& config : machine.configs) {
-    config.init(context, device, xlbin_path);
-  }
+  // Finally, execute the graph
+  execute_dag_with_schedule(context, machine, graph, schedule);
 }
 
-cl_int get_kernel_cost(const ScheduledTask& task) {
+cl_int get_kernel_cost(const ScheduledTask &task) {
   // TODO: project this to actual hardware numbers
   return task.cost[task.pe.id];
 }
 
-void execute_dag_with_schedule(cl::Context &context, cl::Program &program,
+void execute_dag_with_schedule(cl::Context &context, Machine &machine,
                                const Graph &graph, const Schedule &schedule) {
   cl_int err;
-  aligned_vector<cl::Event> events;
+  std::vector<cl::Event> events;
+
+  // Using an out-of-order queue, so we can have true parallelism
+  cl::CommandQueue queue(
+      context, machine.device,
+      CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
 
   // Mutable copy
   Schedule sorted_schedule = schedule;
