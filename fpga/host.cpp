@@ -55,13 +55,16 @@ int main(int argc, char **argv) {
   assert(num_vertices(graph) > 0);
 
   Schedule schedule;
-  read_schedule_from_csv(schedule_path, schedule);
+  read_schedule(schedule_path, graph, schedule);
   assert(schedule.size() == num_vertices(graph));
+
+  Machine machine;
+  read_machine_model(schedule_path, machine);
 }
 
 cl_int get_kernel_cost(const ScheduledTask& task) {
   // TODO: project this to actual hardware numbers
-  return task.cost[task.PE];
+  return task.cost[task.pe.id];
 }
 
 void execute_dag_with_schedule(cl::Context &context, cl::Program &program,

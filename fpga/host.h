@@ -2,6 +2,7 @@
 
 #include "boost/graph/graphml.hpp"
 #include "boost/property_map/dynamic_property_map.hpp"
+#include "json.hpp"
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #include "spdlog/spdlog.h"
 #include <CL/opencl.hpp>
@@ -14,30 +15,46 @@
 #include <string>
 #include <vector>
 
+struct PE {
+  uint32_t id;
+  std::string function_name;
+};
+
 struct Task {
   uint32_t id;
   std::string label;
-  std::vector<int> cost;
+  std::vector<uint32_t> cost;
 };
 
-struct ScheduledTask : Task {
+struct ScheduledTask : public Task {
   uint32_t t_s;
-  uint32_t PE;
+  PE pe;
+
+  ScheduledTask(const Task &t, uint32_t t_s, PE pe)
+      : Task(t), t_s(t_s), pe(pe) {}
 };
 
 struct Dependency {
-  std::vector<int> cost;
+  std::vector<uint32_t> cost;
+};
+
+
+struct Configuration {
+  uint32_t id;
+  std::string file_name;
+  std::vector<PE> PEs;
+};
+
+struct Machine {
+  std::vector<Configuration> configs;
 };
 
 // Use a page-aligned vector
 template <typename T>
 using aligned_vector =
     std::vector<T, boost::alignment::aligned_allocator<T, 4096>>;
-
 // A schedule is the set of ScheduledTasks, since they contain t_s and the PE
 using Schedule = std::vector<ScheduledTask>;
-
-/* using Graph = boost::directed_graph<Task, Dependency>; */
 using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
                                     Task, Dependency>;
 
@@ -71,9 +88,15 @@ private:
   FromString from_string;
 };
 
-
+/**
+ * @brief Helper function to get the first device from the first platform
+ *
+ * @param context Context to be set (to the device ctx)
+ * @param platform Platform to be set (to the first platform found)
+ * @param device Device to be set
+ */
 inline void get_first_device(cl::Context &context, cl::Platform &platform,
-                      cl::Device &device) {
+                             cl::Device &device) {
   std::vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
   spdlog::info("Found {} platforms:", platforms.size());
@@ -100,11 +123,18 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
   cl::Context device_ctx(device);
   context = device_ctx;
 }
+inline std::string vec2str(std::vector<uint32_t>);
+inline auto str2vec(std::string const &str) -> std::vector<uint32_t>;
 
-inline std::string vec2str(std::vector<int>);
-inline auto str2vec(std::string const &str) -> std::vector<int>;
+/**
+ * @brief Read the task graph from GraphML
+ *
+ * @param graph_path Path to the task graph XML
+ * @param graph Empty graph object
+ * @param properties Empty dynamic_properties
+ */
 inline void read_graph(const std::filesystem::path &graph_path, Graph &graph,
-                boost::dynamic_properties &properties) {
+                       boost::dynamic_properties &properties) {
   std::ifstream is(graph_path, std::ios::binary);
   properties.property("label", boost::get(&Task::label, graph));
   properties.property("comm",
@@ -115,41 +145,79 @@ inline void read_graph(const std::filesystem::path &graph_path, Graph &graph,
       TranslateStringPMap{boost::get(&Task::cost, graph), vec2str, str2vec});
   boost::read_graphml(is, graph, properties);
   spdlog::info("Imported {} with {} vertices and {} edges",
-       graph_path.filename().c_str(), boost::num_vertices(graph),
-       boost::num_edges(graph));
+               graph_path.filename().c_str(), boost::num_vertices(graph),
+               boost::num_edges(graph));
 }
 
-inline void read_schedule_from_csv(const std::filesystem::path &schedule_path, Schedule &schedule) {
+/**
+ * @brief Read the schedule from JSON
+ *
+ * @param schedule_path Path to the JSON file
+ * @param graph Task graph to construct the ScheduledTasks from
+ * @param schedule Schedule to be constructed
+ */
+inline void read_schedule(const std::filesystem::path &schedule_path,
+                          const Graph &graph, Schedule &schedule) {
+  using json = nlohmann::json;
   std::ifstream is(schedule_path, std::ios::binary);
-  std::vector<std::string> result;
-  std::string line;
+  json data = json::parse(is);
 
-  while (std::getline(is, line)) {
-    std::stringstream line_stream(line);
-    std::string tok;
-    ScheduledTask task;
-    std::getline(line_stream, tok, ',');
-    task.id = std::stoi(tok);
-    std::getline(line_stream, tok, ',');
-    task.t_s = std::stoi(tok);
-    std::getline(line_stream, tok, ',');
-    task.PE = std::stoi(tok);
+  auto tasks = vertices(graph);
+  // TODO: maybe put this into a map as it's currently N^2
+  auto find_task_by_id = [tasks, &graph](uint32_t task_id) {
+    auto task_it = std::find_if(tasks.first, tasks.second,
+                                [task_id, &graph](const auto &task) {
+                                  return graph[task].id == task_id;
+                                });
+    // We screwed up if the task's id is unknown.
+    assert(task_it != tasks.second);
+    return graph[*task_it];
+  };
 
-    schedule.push_back(std::move(task));
+  for (auto &task_data : data["schedule"]) {
+    auto plain_task = find_task_by_id(task_data["id"]);
+    uint32_t t_s = task_data["t_s"];
+    PE pe{task_data["PE"]};
+    schedule.emplace_back(plain_task, t_s, pe);
   }
 }
 
+/**
+ * @brief Read the machine model from JSON
+ *
+ * @param machine_path Path to JSON (may be same as schedule_path)
+ * @param machine Empty machine model
+ */
+inline void read_machine_model(const std::filesystem::path &machine_path,
+                               Machine &machine) {
+  using json = nlohmann::json;
+  std::ifstream is(machine_path, std::ios::binary);
+  json data = json::parse(is);
+
+  for (auto &config_data : data["configurations"]) {
+    Configuration config;
+    config.id = config_data["id"];
+    config.file_name = config_data["file_name"];
+    for (auto &pe_data : config_data["PEs"]) {
+      uint32_t id = pe_data["id"];
+      std::string kernel_name = pe_data["function_name"];
+
+      config.PEs.push_back({id, kernel_name});
+    }
+    machine.configs.push_back(std::move(config));
+  }
+}
 
 /**
  * @brief Execute the DAG found in graph on device using schedule
  *
- * @param context 
- * @param device 
- * @param graph 
- * @param schedule 
+ * @param context
+ * @param device
+ * @param graph
+ * @param schedule
  */
-void execute_dag_with_schedule(cl::Context &context, cl::Device &device, const Graph &graph,
-                 const Schedule &schedule);
+void execute_dag_with_schedule(cl::Context &context, cl::Device &device,
+                               const Graph &graph, const Schedule &schedule);
 
 inline void read_binaries(const std::filesystem::path directory,
                           cl::Program::Binaries out,
@@ -167,11 +235,11 @@ inline void read_binaries(const std::filesystem::path directory,
   spdlog::info("Read {} binaries from {}", out.size(), directory.c_str());
 }
 
-inline std::string vec2str(std::vector<int>) { return ""; }
-inline auto str2vec(std::string const &str) -> std::vector<int> {
+inline std::string vec2str(std::vector<uint32_t>) { return ""; }
+inline auto str2vec(std::string const &str) -> std::vector<uint32_t> {
   auto number = 0;
   auto out = str;
-  auto vec = std::vector<int>{};
+  auto vec = std::vector<uint32_t>{};
   std::transform(str.cbegin(), str.cend(), out.begin(),
                  [](char ch) { return (ch == ',') ? ' ' : ch; });
   auto strs = std::stringstream{out};
