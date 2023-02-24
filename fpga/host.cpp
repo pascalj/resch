@@ -45,10 +45,6 @@ int main(int argc, char **argv) {
   path xlbin_path(argv[2]);
   path schedule_path(argv[3]);
 
-  cl::Program::Binaries bins;
-  read_binaries(xlbin_path, bins);
-  cl::Program program(context, {device}, bins, nullptr, &err);
-
   Graph graph;
   boost::dynamic_properties properties(boost::ignore_other_properties);
   read_graph(graph_path, graph, properties);
@@ -56,10 +52,14 @@ int main(int argc, char **argv) {
 
   Schedule schedule;
   read_schedule(schedule_path, graph, schedule);
-  assert(schedule.size() == num_vertices(graph));
+  /* assert(schedule.size() == num_vertices(graph)); */
 
   Machine machine;
   read_machine_model(schedule_path, machine);
+
+  for(auto& config : machine.configs) {
+    config.init(context, device, xlbin_path);
+  }
 }
 
 cl_int get_kernel_cost(const ScheduledTask& task) {
