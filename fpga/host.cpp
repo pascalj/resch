@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   cl::Device device;
   get_first_device(context, platform, device);
 
-  //Load and initialize graph, schedule and machine model
+  // Load and initialize graph, schedule and machine model
   Graph graph;
   boost::dynamic_properties properties(boost::ignore_other_properties);
   read_graph(graph_path, graph, properties);
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   machine.init(context, device, xlbin_path);
 
   // Finally, execute the graph
-  execute_dag_with_schedule(context, machine, graph, schedule);
+  execute_dag_with_allocation(context, machine, graph, schedule);
 }
 
 cl_int get_kernel_cost(const ScheduledTask &task) {
@@ -60,10 +60,11 @@ cl_int get_kernel_cost(const ScheduledTask &task) {
   return task.cost[task.pe.id];
 }
 
-void execute_dag_with_schedule(cl::Context &context, Machine &machine,
-                               const Graph &graph, const Schedule &schedule) {
+void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
+                                 const Graph &graph, const Schedule &schedule) {
   cl_int err;
-  std::vector<cl::Event> events;
+
+  std::map<uint32_t, cl::Event> events;
 
   // Using an out-of-order queue, so we can have true parallelism
   cl::CommandQueue queue(
@@ -75,7 +76,12 @@ void execute_dag_with_schedule(cl::Context &context, Machine &machine,
   std::sort(sorted_schedule.begin(), sorted_schedule.end(),
             [](const auto &lhs, const auto &rhs) { return lhs.t_s < rhs.t_s; });
 
+  // This is topologically sorted, so we can just enqueue these as-is
   for (auto &task : sorted_schedule) {
     // enqueue...
+    cl::Event task_event;
+    // TODO...
+    queue.enqueueNDRangeKernel(task.pe.kernel, 0, 0);
+    events.insert(std::make_pair(task.id, task_event));
   }
 }

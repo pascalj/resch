@@ -241,15 +241,19 @@ inline void read_machine_model(const std::filesystem::path &machine_path,
 }
 
 /**
- * @brief Execute the DAG found in graph on device using schedule
+ * @brief Execute a task graph using only the allocation from the schedule
  *
- * @param context
- * @param machine
- * @param graph
- * @param schedule
+ * This method does not try to delay the execution of tasks, but assignes them
+ * only to the assigned PEs and enqueues them. This should be relatively fast,
+ * but in theory could be worse than the optimal case.
+ *
+ * @param context cl::Context
+ * @param machine Machine model to use
+ * @param graph Graph of tasks to execute
+ * @param schedule The schedule with the allocation included
  */
-void execute_dag_with_schedule(cl::Context &, Machine &, const Graph &,
-                               const Schedule &);
+void execute_dag_with_allocation(cl::Context &, Machine &, const Graph &,
+                                 const Schedule &);
 
 inline std::string vec2str(std::vector<uint32_t>) { return ""; }
 inline auto str2vec(std::string const &str) -> std::vector<uint32_t> {
