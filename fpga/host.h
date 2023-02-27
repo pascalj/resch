@@ -285,6 +285,20 @@ inline void read_machine_model(const std::filesystem::path &machine_path,
 }
 
 /**
+ * @brief Tune parameters for processing and communication cost
+ *
+ * It executes a range of kernels and measures their execution time, performs a
+ * linear regression on it and then returns beta_0 and beta_1.
+ *
+ * @param ctx The CL context
+ * @param dev The CL device
+ * @param conf A fitting configuration (any shoul be valid)
+ */
+std::tuple<int, int> tune_parameters(const cl::Context &ctx,
+                                     const cl::Device &dev,
+                                     Configuration &conf);
+
+/**
  * @brief Execute a task graph using only the allocation from the schedule
  *
  * This method does not try to delay the execution of tasks, but assignes them

@@ -52,6 +52,8 @@ int main(int argc, char **argv) {
   read_machine_model(schedule_path, machine);
   machine.init(context, device, xlbin_path);
 
+  tune_parameters(context, device, machine.configs[0]);
+
   // Finally, execute the graph
   execute_dag_with_allocation(context, machine, graph, schedule);
 }
@@ -63,22 +65,76 @@ cl_int get_kernel_cost(const ScheduledTask &task) {
 
 std::tuple<int, int> tune_parameters(const cl::Context &ctx,
                                      const cl::Device &dev,
-                                     const Configuration &conf) {
-  int alpha = 0;
-  int beta = 0;
-
+                                     Configuration &conf) {
   auto queue = cl::CommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE);
   std::vector<cl::Event> events;
 
   cl::NDRange gsize(1);
   cl::NDRange offset(0);
-  for(int i = 1; i < (1 << 16); i = i << 1) {
-    auto pe = conf.PEs.front();
+  cl::NDRange lsize(1);
+  cl::Buffer buf(ctx, CL_MEM_READ_WRITE, sizeof(int));
+  queue.enqueueMapBuffer(buf, 1, CL_MAP_WRITE | CL_MAP_READ, sizeof(int), 1);
+
+  // Execute a range of kernels and double the "compute size" every time. Also
+  // track the timing (CL_QUEUE_PROFILING_ENABLE) and save it into
+  // 'measurements'.
+  for (int i = 1; i < (1 << 23); i = i << 1) {
+    auto &pe = conf.PEs.front();
     pe.kernel.setArg(0, i);
-    /* queue.enqueueNDRangeKernel(pe.kernel, 1, 0, */ 
+    pe.kernel.setArg(1, buf);
+    auto &event = events.emplace_back();
+    queue.enqueueNDRangeKernel(pe.kernel, offset, gsize, lsize, nullptr,
+                               &event);
   }
-  
-  return std::make_tuple(alpha, beta);
+  queue.flush();
+  queue.finish();
+
+  cl::vector<std::pair<int, int>> measurements;
+  int i = 1;
+  for (auto &event : events) {
+    auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
+    measurements.emplace_back(i, end - start);
+    i = i << 1;
+  }
+
+  // Simple linear regression
+  auto avg_x =
+      std::accumulate(measurements.begin(), measurements.end(), 0.,
+                      [](auto acc, auto point) { return acc + point.first; }) /
+      measurements.size();
+  auto avg_y =
+      std::accumulate(measurements.begin(), measurements.end(), 0.,
+                      [](auto acc, auto point) { return acc + point.second; }) /
+      measurements.size();
+  auto numerator = std::accumulate(
+      measurements.begin(), measurements.end(), 0., [=](auto acc, auto point) {
+        return (point.first - avg_x) * (point.second - avg_y);
+      });
+  auto denominator = std::accumulate(
+      measurements.begin(), measurements.end(), 0., [=](auto acc, auto point) {
+        return (point.first - avg_x) * (point.first - avg_x);
+      });
+
+  auto beta_1 = numerator / denominator;
+  auto beta_0 = avg_y - beta_1 * avg_x;
+
+  // Check coefficient of determination R^2.
+  // We should be able to get a value very near 1.
+  auto sqr = std::accumulate(
+      measurements.begin(), measurements.end(), 0., [=](auto acc, auto point) {
+        auto y_hat = beta_0 + beta_1 * point.first;
+        return (point.second - y_hat) * (point.second - y_hat);
+      });
+  auto sqt = std::accumulate(
+      measurements.begin(), measurements.end(), 0., [=](auto acc, auto point) {
+        return (point.second - avg_y) * (point.second - avg_y);
+      });
+  auto R_squared = 1. - (sqr / sqt);
+  assert(R_squared > 0.9 && R_squared <= 1);
+  spdlog::debug("beta_0: {}, beta_1: {} (R^2: {})", beta_0, beta_1, R_squared);
+
+  return std::make_tuple(beta_0, beta_1);
 }
 
 void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
@@ -99,9 +155,7 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
 
   // This is topologically sorted, so we can just enqueue these as-is
   for (auto &task : sorted_schedule) {
-    // enqueue...
     cl::Event task_event;
-    // TODO...
     auto& pe = machine.pe(task.pe_id);
     events.insert(std::make_pair(task.id, task_event));
     std::cout << "task id: " << task.id << std::endl;
@@ -109,7 +163,6 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
     std::vector<cl::Event> dependent;
     std::for_each(edge_its.first, edge_its.second, [&] (auto it) {
       auto stask = source(it, graph);
-      std::cout << "Indep: " << stask << std::endl;
       assert(events.count(stask) == 1);
       dependent.push_back(events[stask]);
     });
