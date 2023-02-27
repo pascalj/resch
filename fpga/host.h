@@ -21,7 +21,9 @@ struct PE {
   cl::Kernel kernel;
 
   void init(const cl::Program &program) {
-    kernel = cl::Kernel(program, function_name.c_str());
+    cl_int err;
+    kernel = cl::Kernel(program, function_name.c_str(), &err);
+    spdlog::debug("Created kernel {}: {}", function_name, err == CL_SUCCESS);
   }
 };
 
@@ -29,14 +31,18 @@ struct Task {
   uint32_t id;
   std::string label;
   std::vector<uint32_t> cost;
+
+  Task(uint32_t id, const std::string &label, const std::vector<uint32_t> &cost)
+      : id(id), label(label), cost(cost) {}
+  Task() {}
 };
 
 struct ScheduledTask : public Task {
   uint32_t t_s;
-  PE pe;
+  uint32_t pe_id;
 
-  ScheduledTask(const Task &t, uint32_t t_s, PE pe)
-      : Task(t), t_s(t_s), pe(pe) {}
+  ScheduledTask(const Task &t, uint32_t t_s, uint32_t pe_id)
+      : Task(t), t_s(t_s), pe_id(pe_id) {}
 };
 
 struct Dependency {
@@ -75,7 +81,21 @@ struct Configuration {
       program = cl::Program(context, devs, bins, nullptr, &err);
       spdlog::debug("Progamming: {}", err == CL_SUCCESS);
     } else {
-      assert(false);
+      auto cl_file =
+        std::filesystem::directory_entry(directory / (file_name + ".cl"));
+      if(cl_file.is_regular_file()) {
+        spdlog::warn("Falling back to GPU/CPU");
+        spdlog::info("Compiling file: {}", cl_file.path().c_str());
+        std::ifstream is(cl_file.path(), std::ios::in | std::ios::binary);
+        std::istreambuf_iterator<char> start(is), end;
+        std::string source(start, end);
+
+        cl_int err;
+        program = cl::Program(context, source, true, &err);
+        spdlog::debug("Progamming: {}", err == CL_SUCCESS);
+      } else {
+        assert(false);
+      }
     }
 
     for (auto &pe : PEs) {
@@ -90,14 +110,24 @@ struct Machine {
   cl::Device device;
 
   void init(const cl::Context &context, const cl::Device &in_dev,
-            std::filesystem::path directory,
-            std::string extension = ".xclbin") {
+            std::filesystem::path directory) {
     device = in_dev;
-
     for (auto &config : configs) {
       config.init(context, device, directory);
     }
   }
+
+  const PE& pe(uint32_t pe_idx) const {
+    for(auto& config : configs) {
+      for(auto& pe : config.PEs) {
+        if(pe.id == pe_idx) {
+          return pe;
+        }
+      }
+    }
+    assert(false);
+  }
+
 };
 
 // Use a page-aligned vector
@@ -106,7 +136,7 @@ using aligned_vector =
     std::vector<T, boost::alignment::aligned_allocator<T, 4096>>;
 // A schedule is the set of ScheduledTasks, since they contain t_s and the PE
 using Schedule = std::vector<ScheduledTask>;
-using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
+using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS,
                                     Task, Dependency>;
 
 // https://stackoverflow.com/questions/73309661/how-to-interpret-complex-strings-as-graph-properties-when-reading-a-graphml-file
@@ -154,7 +184,7 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
   for (auto &platform : platforms) {
     spdlog::debug("\t{}", platform.getInfo<CL_PLATFORM_NAME>());
   }
-  assert(platforms.size() == 1);
+  assert(platforms.size() >= 1);
 
   // cheap to copy
   platform = platforms[0];
@@ -191,7 +221,8 @@ inline void read_graph(const std::filesystem::path &graph_path, Graph &graph,
                        boost::dynamic_properties &properties) {
   std::ifstream is(graph_path, std::ios::binary);
   properties.property("label", boost::get(&Task::label, graph));
-  properties.property("id", boost::get(boost::vertex_index, graph));
+  /* properties.property("id", boost::get(boost::vertex_index, graph)); */
+  properties.property("node_id", boost::get(&Task::id, graph));
   properties.property("comm",
                       TranslateStringPMap{boost::get(&Dependency::cost, graph),
                                           vec2str, str2vec});
@@ -222,9 +253,10 @@ inline void read_schedule(const std::filesystem::path &schedule_path,
 
   for (auto &task_data : data["schedule"]) {
     auto plain_task = graph[static_cast<int>(task_data["id"])];
+    plain_task.id = task_data["id"];
     uint32_t t_s = task_data["t_s"];
-    PE pe{task_data["PE"]};
-    schedule.emplace_back(plain_task, t_s, pe);
+    uint32_t pe_id = task_data["PE"];
+    schedule.emplace_back(plain_task, t_s, pe_id);
   }
   /* assert(schedule.size() == num_vertices(graph)); */
 }

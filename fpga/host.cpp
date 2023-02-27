@@ -22,6 +22,7 @@
 int main(int argc, char **argv) {
   using spdlog::info;
   using std::filesystem::path;
+  spdlog::set_level(spdlog::level::debug);
 
   if (argc != 4) {
     usage(argv[0]);
@@ -57,7 +58,7 @@ int main(int argc, char **argv) {
 
 cl_int get_kernel_cost(const ScheduledTask &task) {
   // TODO: project this to actual hardware numbers
-  return task.cost[task.pe.id];
+  return task.cost[task.pe_id];
 }
 
 void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
@@ -81,7 +82,30 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
     // enqueue...
     cl::Event task_event;
     // TODO...
-    queue.enqueueNDRangeKernel(task.pe.kernel, 0, 0);
+    auto& pe = machine.pe(task.pe_id);
     events.insert(std::make_pair(task.id, task_event));
+    std::cout << "task id: " << task.id << std::endl;
+    auto edge_its = in_edges(task.id, graph);
+    std::vector<cl::Event> dependent;
+    std::for_each(edge_its.first, edge_its.second, [&] (auto it) {
+      auto stask = source(it, graph);
+      std::cout << "Indep: " << stask << std::endl;
+      assert(events.count(stask) == 1);
+      dependent.push_back(events[stask]);
+    });
+    err = queue.enqueueNDRangeKernel(pe.kernel, 0, 0, cl::NullRange, &dependent, &events[task.id]);
+    spdlog::debug("Enqueued task {}: {}", task.label, err == CL_SUCCESS);
+  }
+
+  queue.flush();
+  queue.finish();
+
+  for(auto &event_pair : events) {
+    auto event = event_pair.second;
+
+    auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
+
+    spdlog::info("Task {}: [{}, {})", event_pair.first, start, end);
   }
 }
