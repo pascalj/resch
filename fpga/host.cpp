@@ -1,7 +1,7 @@
 #include "host.h"
 #include "json.hpp"
 #include "spdlog/spdlog.h"
-#include <CL/opencl.hpp>
+#include <CL/cl2.hpp>
 #include <algorithm>
 #include <boost/graph/directed_graph.hpp>
 #include <boost/graph/graphml.hpp>

@@ -5,7 +5,7 @@
 #include "json.hpp"
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #include "spdlog/spdlog.h"
-#include <CL/opencl.hpp>
+#include <CL/cl2.hpp>
 #include <boost/align/aligned_allocator.hpp>
 #include <boost/graph/directed_graph.hpp>
 #include <boost/property_map/property_map.hpp>
@@ -60,19 +60,26 @@ struct Configuration {
             std::filesystem::path directory,
             std::string extension = ".xclbin") {
     auto config_bin_file =
-        std::filesystem::directory_entry(directory / file_name / extension);
+        std::filesystem::directory_entry(directory / (file_name + extension));
+    spdlog::info("Attempting to load {}", config_bin_file.path().c_str());
     if (config_bin_file.is_regular_file()) {
       std::ifstream is(config_bin_file.path(), std::ios::binary);
-      std::istream_iterator<unsigned char> start(is), end;
+      std::istreambuf_iterator<char> start(is), end;
       std::vector<unsigned char> binary(start, end);
+      cl::Program::Binaries bins{{binary}};
       spdlog::info("Read {} bytes from {}", binary.size(),
                    config_bin_file.path().filename().c_str());
-      program = cl::Program(context, {device}, {binary}, nullptr, nullptr);
+      std::vector<cl::Device> devs{{device}};
+      cl_int err;
+
+      program = cl::Program(context, devs, bins, nullptr, &err);
+      spdlog::debug("Progamming: {}", err == CL_SUCCESS);
     } else {
       assert(false);
     }
 
     for (auto &pe : PEs) {
+      spdlog::info("Initializing PE {}", pe.id);
       pe.init(program);
     }
   }
@@ -82,9 +89,11 @@ struct Machine {
   std::vector<Configuration> configs;
   cl::Device device;
 
-  void init(const cl::Context &context, const cl::Device &device,
+  void init(const cl::Context &context, const cl::Device &in_dev,
             std::filesystem::path directory,
             std::string extension = ".xclbin") {
+    device = in_dev;
+
     for (auto &config : configs) {
       config.init(context, device, directory);
     }
@@ -141,9 +150,9 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
                              cl::Device &device) {
   std::vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
-  spdlog::info("Found {} platforms:", platforms.size());
+  spdlog::debug("Found {} platforms:", platforms.size());
   for (auto &platform : platforms) {
-    spdlog::info("\t{}", platform.getInfo<CL_PLATFORM_NAME>());
+    spdlog::debug("\t{}", platform.getInfo<CL_PLATFORM_NAME>());
   }
   assert(platforms.size() == 1);
 
@@ -153,16 +162,19 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
 
   std::vector<cl::Device> devices;
   platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
-  spdlog::info("Found {} devices:", devices.size());
+  spdlog::debug("Found {} devices:", devices.size());
   for (auto &device : devices) {
-    spdlog::info("\t{}", device.getInfo<CL_DEVICE_NAME>());
+    spdlog::debug("\t{}", device.getInfo<CL_DEVICE_NAME>());
   }
   assert(platforms.size() >= 1);
 
   device = devices[0];
   spdlog::info("Selected {}", device.getInfo<CL_DEVICE_NAME>());
 
-  cl::Context device_ctx(device);
+  cl_int err;
+  cl::Context device_ctx({device}, nullptr, nullptr, nullptr, &err);
+  spdlog::debug("Context: {}", err == CL_SUCCESS);
+
   context = device_ctx;
 }
 inline std::string vec2str(std::vector<uint32_t>);
@@ -252,7 +264,7 @@ inline void read_machine_model(const std::filesystem::path &machine_path,
  * @param graph Graph of tasks to execute
  * @param schedule The schedule with the allocation included
  */
-void execute_dag_with_allocation(cl::Context &, Machine &, const Graph &,
+void execute_dag_with_allocation(cl::Context &, const Machine &, const Graph &,
                                  const Schedule &);
 
 inline std::string vec2str(std::vector<uint32_t>) { return ""; }
