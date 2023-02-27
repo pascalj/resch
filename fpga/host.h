@@ -294,9 +294,15 @@ inline void read_machine_model(const std::filesystem::path &machine_path,
  * @param dev The CL device
  * @param conf A fitting configuration (any shoul be valid)
  */
-std::tuple<int, int> tune_parameters(const cl::Context &ctx,
+std::pair<int, int> tune_parameters(const cl::Context &ctx,
                                      const cl::Device &dev,
-                                     Configuration &conf);
+                                     Configuration &conf, std::function<void(int, cl::Kernel&)>);
+
+
+constexpr int max_compsize_shift = 24;
+constexpr int max_bufsize_shift = 24;
+using Measurement = std::pair<int, int>;
+std::pair<int, int> linreg(const std::vector<Measurement>& measurements);
 
 /**
  * @brief Execute a task graph using only the allocation from the schedule

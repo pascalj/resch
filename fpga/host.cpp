@@ -52,7 +52,24 @@ int main(int argc, char **argv) {
   read_machine_model(schedule_path, machine);
   machine.init(context, device, xlbin_path);
 
-  tune_parameters(context, device, machine.configs[0]);
+  cl::Buffer out_buf(context, CL_MEM_READ_WRITE, sizeof(int));
+  cl::Buffer in_buf(context, CL_MEM_READ_WRITE, sizeof(int) * (1 << max_bufsize_shift));
+  tune_parameters(context, device, machine.configs[0],
+                  [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
+                    int size = 1 << i;
+                    kernel.setArg(0, size);
+                    kernel.setArg(1, in_buf);
+                    kernel.setArg(2, 0);
+                    kernel.setArg(3, out_buf);
+                  });
+  tune_parameters(context, device, machine.configs[0],
+                  [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
+                    int size = 1 << i;
+                    kernel.setArg(0, 1);
+                    kernel.setArg(1, in_buf);
+                    kernel.setArg(2, size);
+                    kernel.setArg(3, out_buf);
+                  });
 
   // Finally, execute the graph
   execute_dag_with_allocation(context, machine, graph, schedule);
@@ -63,25 +80,23 @@ cl_int get_kernel_cost(const ScheduledTask &task) {
   return task.cost[task.pe_id];
 }
 
-std::tuple<int, int> tune_parameters(const cl::Context &ctx,
-                                     const cl::Device &dev,
-                                     Configuration &conf) {
+std::pair<int, int>
+tune_parameters(const cl::Context &ctx, const cl::Device &dev,
+                Configuration &conf,
+                std::function<void(int, cl::Kernel &)> set_args) {
   auto queue = cl::CommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE);
   std::vector<cl::Event> events;
 
   cl::NDRange gsize(1);
   cl::NDRange offset(0);
   cl::NDRange lsize(1);
-  cl::Buffer buf(ctx, CL_MEM_READ_WRITE, sizeof(int));
-  queue.enqueueMapBuffer(buf, 1, CL_MAP_WRITE | CL_MAP_READ, sizeof(int), 1);
 
   // Execute a range of kernels and double the "compute size" every time. Also
   // track the timing (CL_QUEUE_PROFILING_ENABLE) and save it into
   // 'measurements'.
-  for (int i = 1; i < (1 << 23); i = i << 1) {
+  for (int i = 1; i < max_bufsize_shift; i++) {
     auto &pe = conf.PEs.front();
-    pe.kernel.setArg(0, i);
-    pe.kernel.setArg(1, buf);
+    set_args(i, pe.kernel);
     auto &event = events.emplace_back();
     queue.enqueueNDRangeKernel(pe.kernel, offset, gsize, lsize, nullptr,
                                &event);
@@ -98,6 +113,10 @@ std::tuple<int, int> tune_parameters(const cl::Context &ctx,
     i = i << 1;
   }
 
+  return linreg(measurements);
+}
+
+std::pair<int, int> linreg(const std::vector<Measurement>& measurements) {
   // Simple linear regression
   auto avg_x =
       std::accumulate(measurements.begin(), measurements.end(), 0.,
@@ -131,10 +150,10 @@ std::tuple<int, int> tune_parameters(const cl::Context &ctx,
         return (point.second - avg_y) * (point.second - avg_y);
       });
   auto R_squared = 1. - (sqr / sqt);
-  assert(R_squared > 0.9 && R_squared <= 1);
   spdlog::debug("beta_0: {}, beta_1: {} (R^2: {})", beta_0, beta_1, R_squared);
+  assert(R_squared > 0.9 && R_squared <= 1);
 
-  return std::make_tuple(beta_0, beta_1);
+  return std::make_pair(beta_0, beta_1);
 }
 
 void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
