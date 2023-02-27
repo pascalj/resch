@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "id": 0,
+      "file_name": "basic",
+      "PEs": [
+        {
+          "id": 0,
+          "function_name": "pe_0"
+        },
+        {
+          "id": 1,
+          "function_name": "pe_1"
+        }
+      ]
+    }
+  ],
+
+  "schedule": [
+    {
+      "id": 0,
+      "PE": 0,
+      "t_s": 0
+    },
+    {
+      "id": 1,
+      "PE": 1,
+      "t_s": 100 
+    }
+  ]
+}

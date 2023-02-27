@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <!-- property keys -->
+  <key id="key0" for="edge" attr.name="comm" attr.type="string" />
+  <key id="key1" for="node" attr.name="cost" attr.type="string" />
+  <key id="key2" for="node" attr.name="label" attr.type="string" />
+  <key id="key3" for="node" attr.name="type" attr.type="int" />
+
+  <graph id="G" edgedefault="directed" parse.nodeids="canonical" parse.edgeids="canonical" parse.order="nodesfirst">
+
+   <!-- graph properties -->
+
+   <!-- vertices -->
+    <node id="n0">
+      <data key="key1">80, 60</data>
+      <data key="key2">Task 1</data>
+      <data key="key3">1</data>
+    </node>
+    <node id="n1">
+      <data key="key1">80, 60</data>
+      <data key="key2">Task 2</data>
+      <data key="key3">1</data>
+    </node>
+
+   <!-- edges -->
+    <edge id="e0" source="n0" target="n1">
+      <data key="key0">0, 10</data>
+    </edge>
+  </graph>
+</graphml>
