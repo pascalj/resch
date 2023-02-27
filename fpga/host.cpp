@@ -61,6 +61,26 @@ cl_int get_kernel_cost(const ScheduledTask &task) {
   return task.cost[task.pe_id];
 }
 
+std::tuple<int, int> tune_parameters(const cl::Context &ctx,
+                                     const cl::Device &dev,
+                                     const Configuration &conf) {
+  int alpha = 0;
+  int beta = 0;
+
+  auto queue = cl::CommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE);
+  std::vector<cl::Event> events;
+
+  cl::NDRange gsize(1);
+  cl::NDRange offset(0);
+  for(int i = 1; i < (1 << 16); i = i << 1) {
+    auto pe = conf.PEs.front();
+    pe.kernel.setArg(0, i);
+    /* queue.enqueueNDRangeKernel(pe.kernel, 1, 0, */ 
+  }
+  
+  return std::make_tuple(alpha, beta);
+}
+
 void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
                                  const Graph &graph, const Schedule &schedule) {
   cl_int err;

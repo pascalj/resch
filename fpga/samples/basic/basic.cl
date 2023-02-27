@@ -1,4 +1,8 @@
-__kernel void pe_0() {
+kernel void pe_0(const int cost) {
+    float val = 23;
+    for(int i = 0; i < cost; i++) {
+        val *= i;
+    }
 }
-__kernel void pe_1() {
+kernel void pe_1(const int cost) {
 }
