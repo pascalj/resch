@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+using namespace std::literals::chrono_literals;
+
 /**
  * @brief Execute task graphs using OpenCL
  *
@@ -52,27 +54,11 @@ int main(int argc, char **argv) {
   read_machine_model(schedule_path, machine);
   machine.init(context, device, xlbin_path);
 
-  cl::Buffer out_buf(context, CL_MEM_READ_WRITE, sizeof(int));
-  cl::Buffer in_buf(context, CL_MEM_READ_WRITE, sizeof(int) * (1 << max_bufsize_shift));
-  tune_parameters(context, device, machine.configs[0],
-                  [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
-                    int size = 1 << i;
-                    kernel.setArg(0, size);
-                    kernel.setArg(1, in_buf);
-                    kernel.setArg(2, 0);
-                    kernel.setArg(3, out_buf);
-                  });
-  tune_parameters(context, device, machine.configs[0],
-                  [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
-                    int size = 1 << i;
-                    kernel.setArg(0, 1);
-                    kernel.setArg(1, in_buf);
-                    kernel.setArg(2, size);
-                    kernel.setArg(3, out_buf);
-                  });
+  Parameters params;
+  params.init(context, device, machine.configs[0]);
 
   // Finally, execute the graph
-  execute_dag_with_allocation(context, machine, graph, schedule);
+  execute_dag_with_allocation(context, machine, graph, schedule, params);
 }
 
 cl_int get_kernel_cost(const ScheduledTask &task) {
@@ -81,7 +67,7 @@ cl_int get_kernel_cost(const ScheduledTask &task) {
 }
 
 std::pair<int, int>
-tune_parameters(const cl::Context &ctx, const cl::Device &dev,
+Parameters::tune_parameters(const cl::Context &ctx, const cl::Device &dev,
                 Configuration &conf,
                 std::function<void(int, cl::Kernel &)> set_args) {
   auto queue = cl::CommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE);
@@ -94,7 +80,7 @@ tune_parameters(const cl::Context &ctx, const cl::Device &dev,
   // Execute a range of kernels and double the "compute size" every time. Also
   // track the timing (CL_QUEUE_PROFILING_ENABLE) and save it into
   // 'measurements'.
-  for (int i = 1; i < max_bufsize_shift; i++) {
+  for (int i = 1; i < max_compsize_shift; i++) {
     auto &pe = conf.PEs.front();
     set_args(i, pe.kernel);
     auto &event = events.emplace_back();
@@ -107,10 +93,10 @@ tune_parameters(const cl::Context &ctx, const cl::Device &dev,
   cl::vector<std::pair<int, int>> measurements;
   int i = 1;
   for (auto &event : events) {
+    i = i << 1;
     auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
     auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
     measurements.emplace_back(i, end - start);
-    i = i << 1;
   }
 
   return linreg(measurements);
@@ -156,8 +142,8 @@ std::pair<int, int> linreg(const std::vector<Measurement>& measurements) {
   return std::make_pair(beta_0, beta_1);
 }
 
-void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
-                                 const Graph &graph, const Schedule &schedule) {
+void execute_dag_with_allocation(cl::Context &context, Machine &machine,
+                                 const Graph &graph, const Schedule &schedule, const Parameters& param) {
   cl_int err;
 
   std::map<uint32_t, cl::Event> events;
@@ -166,6 +152,8 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
   cl::CommandQueue queue(
       context, machine.device,
       CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
+  cl::Buffer out_buf(context, CL_MEM_READ_WRITE, sizeof(int));
+  cl::Buffer in_buf(context, CL_MEM_READ_WRITE, sizeof(int) * (1 << max_bufsize_shift));
 
   // Mutable copy
   Schedule sorted_schedule = schedule;
@@ -174,19 +162,35 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
 
   // This is topologically sorted, so we can just enqueue these as-is
   for (auto &task : sorted_schedule) {
+    // Get the incomming edges and wait for the respective tasks' events
     cl::Event task_event;
-    auto& pe = machine.pe(task.pe_id);
+    auto &pe = machine.pe(task.pe_id);
     events.insert(std::make_pair(task.id, task_event));
-    std::cout << "task id: " << task.id << std::endl;
     auto edge_its = in_edges(task.id, graph);
+
     std::vector<cl::Event> dependent;
-    std::for_each(edge_its.first, edge_its.second, [&] (auto it) {
-      auto stask = source(it, graph);
-      assert(events.count(stask) == 1);
-      dependent.push_back(events[stask]);
+    std::for_each(edge_its.first, edge_its.second, [&](auto it) {
+      auto src_task = source(it, graph);
+      // A source task should have exactly one event attached
+      assert(events.count(src_task) == 1);
+      dependent.push_back(events[src_task]);
     });
-    err = queue.enqueueNDRangeKernel(pe.kernel, 0, 0, cl::NullRange, &dependent, &events[task.id]);
-    spdlog::debug("Enqueued task {}: {}", task.label, err == CL_SUCCESS);
+
+    auto computation_cost =
+        param.predict_compute_size(task.cost_as<std::chrono::milliseconds>());
+    auto data_cost = param.predict_data_size(1ms);
+
+    // Enqueue the task
+    cl::NDRange gsize(1);
+    cl::NDRange offset(0);
+    cl::NDRange lsize(1);
+    pe.kernel.setArg(0, computation_cost);
+    pe.kernel.setArg(1, in_buf);
+    pe.kernel.setArg(2, data_cost);
+    pe.kernel.setArg(3, out_buf);
+    err = queue.enqueueNDRangeKernel(pe.kernel, offset, gsize, lsize, &dependent,
+                                     &events[task.id]);
+    spdlog::debug("Enqueued task {}: {},", task.label, err == CL_SUCCESS);
   }
 
   queue.flush();
@@ -197,7 +201,8 @@ void execute_dag_with_allocation(cl::Context &context, const Machine &machine,
 
     auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
     auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
+    std::chrono::nanoseconds duration(end - start);
 
-    spdlog::info("Task {}: [{}, {})", event_pair.first, start, end);
+    spdlog::info("Task {}: {}ms [{}, {})", event_pair.first, std::chrono::duration_cast<std::chrono::milliseconds>(duration).count(), start, end);
   }
 }

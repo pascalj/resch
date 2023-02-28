@@ -6,6 +6,7 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 200
 #include "spdlog/spdlog.h"
 #include <CL/cl2.hpp>
+#include <chrono>
 #include <boost/align/aligned_allocator.hpp>
 #include <boost/graph/directed_graph.hpp>
 #include <boost/property_map/property_map.hpp>
@@ -14,6 +15,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+using namespace std::literals::chrono_literals;
 
 struct PE {
   uint32_t id;
@@ -35,6 +38,7 @@ struct Task {
   Task(uint32_t id, const std::string &label, const std::vector<uint32_t> &cost)
       : id(id), label(label), cost(cost) {}
   Task() {}
+
 };
 
 struct ScheduledTask : public Task {
@@ -43,6 +47,14 @@ struct ScheduledTask : public Task {
 
   ScheduledTask(const Task &t, uint32_t t_s, uint32_t pe_id)
       : Task(t), t_s(t_s), pe_id(pe_id) {}
+
+  /**
+   * @brief Get the computational cost interpreted as milliseconds
+   */
+  template<typename T>
+  T cost_as() const {
+    return T{cost[pe_id]};
+  }
 };
 
 struct Dependency {
@@ -117,7 +129,7 @@ struct Machine {
     }
   }
 
-  const PE& pe(uint32_t pe_idx) const {
+  PE& pe(uint32_t pe_idx) {
     for(auto& config : configs) {
       for(auto& pe : config.PEs) {
         if(pe.id == pe_idx) {
@@ -128,6 +140,69 @@ struct Machine {
     assert(false);
   }
 
+};
+
+/**
+ * @brief Tune parameters for processing and communication cost
+ *
+ * It executes a range of kernels and measures their execution time, performs a
+ * linear regression on it and then returns beta_0 and beta_1.
+ *
+ * @param ctx The CL context
+ * @param dev The CL device
+ * @param conf A fitting configuration (any shoul be valid)
+ */
+constexpr int max_compsize_shift = 20;
+constexpr int max_bufsize_shift = 20;
+
+struct Parameters {
+  float compute_beta_0;
+  float compute_beta_1;
+  float data_beta_0;
+  float data_beta_1;
+
+  void init(const cl::Context &context, const cl::Device& device, Configuration& config) {
+    cl::Buffer out_buf(context, CL_MEM_READ_WRITE, sizeof(int) * 2);
+    cl::Buffer in_buf(context, CL_MEM_READ_WRITE, sizeof(int) * (1 << max_bufsize_shift));
+    auto compute_pair = tune_parameters(context, device, config,
+        [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
+        int size = 1 << i;
+        kernel.setArg(0, size);
+        kernel.setArg(1, in_buf);
+        kernel.setArg(2, 0);
+        kernel.setArg(3, out_buf);
+        });
+    auto data_pair = tune_parameters(context, device, config,
+        [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
+        int size = 1 << i;
+        kernel.setArg(0, 1);
+        kernel.setArg(1, in_buf);
+        kernel.setArg(2, size);
+        kernel.setArg(3, out_buf);
+        });
+    compute_beta_0 = compute_pair.first;
+    compute_beta_1 = compute_pair.second;
+    data_beta_0 = data_pair.first;
+    data_beta_1 = data_pair.second;
+
+    spdlog::debug("Determined comp_beta: {}, {} and data_beta {}, {}",
+                  compute_beta_0, compute_beta_1, data_beta_0, data_beta_1);
+  }
+
+  int predict_compute_size(std::chrono::nanoseconds duration) const {
+    return (duration.count() - compute_beta_0) / compute_beta_1;
+  }
+
+  int predict_data_size(std::chrono::nanoseconds duration) const {
+    assert(data_beta_0 != 0);
+    assert(data_beta_1 != 0);
+    return (duration.count() - data_beta_0) / data_beta_1;
+  }
+
+  private:
+    std::pair<int, int> tune_parameters(const cl::Context &, const cl::Device &,
+                                        Configuration &,
+                                        std::function<void(int, cl::Kernel &)>);
 };
 
 // Use a page-aligned vector
@@ -284,23 +359,6 @@ inline void read_machine_model(const std::filesystem::path &machine_path,
   }
 }
 
-/**
- * @brief Tune parameters for processing and communication cost
- *
- * It executes a range of kernels and measures their execution time, performs a
- * linear regression on it and then returns beta_0 and beta_1.
- *
- * @param ctx The CL context
- * @param dev The CL device
- * @param conf A fitting configuration (any shoul be valid)
- */
-std::pair<int, int> tune_parameters(const cl::Context &ctx,
-                                     const cl::Device &dev,
-                                     Configuration &conf, std::function<void(int, cl::Kernel&)>);
-
-
-constexpr int max_compsize_shift = 24;
-constexpr int max_bufsize_shift = 24;
 using Measurement = std::pair<int, int>;
 std::pair<int, int> linreg(const std::vector<Measurement>& measurements);
 
@@ -316,8 +374,8 @@ std::pair<int, int> linreg(const std::vector<Measurement>& measurements);
  * @param graph Graph of tasks to execute
  * @param schedule The schedule with the allocation included
  */
-void execute_dag_with_allocation(cl::Context &, const Machine &, const Graph &,
-                                 const Schedule &);
+void execute_dag_with_allocation(cl::Context &, Machine &, const Graph &,
+                                 const Schedule &, const Parameters &param);
 
 inline std::string vec2str(std::vector<uint32_t>) { return ""; }
 inline auto str2vec(std::string const &str) -> std::vector<uint32_t> {
