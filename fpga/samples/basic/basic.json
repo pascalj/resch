@@ -13,6 +13,20 @@
           "function_name": "pe_2"
         }
       ]
+    },
+    {
+      "id": 1,
+      "file_name": "basic",
+      "PEs": [
+        {
+          "id": 2,
+          "function_name": "pe_2"
+        },
+        {
+          "id": 3,
+          "function_name": "pe_3"
+        }
+      ]
     }
   ],
 
@@ -25,6 +39,11 @@
     {
       "id": 1,
       "PE": 1,
+      "t_s": 100 
+    },
+    {
+      "id": 2,
+      "PE": 3,
       "t_s": 100 
     }
   ]
