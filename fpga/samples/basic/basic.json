@@ -6,11 +6,11 @@
       "PEs": [
         {
           "id": 0,
-          "function_name": "pe_0"
+          "function_name": "pe_1"
         },
         {
           "id": 1,
-          "function_name": "pe_1"
+          "function_name": "pe_2"
         }
       ]
     }

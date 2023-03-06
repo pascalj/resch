@@ -106,7 +106,10 @@ struct Configuration {
 
         cl_int err;
         program = cl::Program(context, source, true, &err);
-        spdlog::debug("Progamming: {}", err == CL_SUCCESS);
+        std::string args = "-DNUM_PES=";
+        args += std::to_string(PEs.size());
+        program.build(args.c_str());
+        spdlog::debug("Progamming: {}, {}", args, err == CL_SUCCESS);
       } else {
         assert(false);
       }
@@ -173,6 +176,7 @@ struct Parameters {
         kernel.setArg(1, in_buf);
         kernel.setArg(2, 0);
         kernel.setArg(3, out_buf);
+        kernel.setArg(4, 0);
         });
     auto data_pair = tune_parameters(context, device, config,
         [&out_buf, &in_buf](int i, cl::Kernel &kernel) {
@@ -181,6 +185,7 @@ struct Parameters {
         kernel.setArg(1, in_buf);
         kernel.setArg(2, size);
         kernel.setArg(3, out_buf);
+        kernel.setArg(4, 0);
         });
     compute_beta_0 = compute_pair.first;
     compute_beta_1 = compute_pair.second;

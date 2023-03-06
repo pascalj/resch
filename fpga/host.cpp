@@ -196,6 +196,7 @@ void execute_dag_with_allocation(cl::Context &context, Machine &machine,
     pe.kernel.setArg(1, in_buf);
     pe.kernel.setArg(2, data_cost);
     pe.kernel.setArg(3, out_buf);
+    pe.kernel.setArg(4, 0);
     err = queue.enqueueNDRangeKernel(pe.kernel, offset, gsize, lsize, &dependent,
                                      &events[task.id]);
     spdlog::debug("Enqueued task {}: {},", task.label, err == CL_SUCCESS);
