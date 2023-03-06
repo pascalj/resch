@@ -24,9 +24,17 @@
       <data key="key2">Task 2</data>
       <data key="key3">1</data>
     </node>
+    <node id="n2">
+      <data key="key1">80, 60</data>
+      <data key="key2">Task 3</data>
+      <data key="key3">1</data>
+    </node>
 
    <!-- edges -->
     <edge id="e0" source="n0" target="n1">
+      <data key="key0">0, 10</data>
+    </edge>
+    <edge id="e2" source="n1" target="n2">
       <data key="key0">0, 10</data>
     </edge>
   </graph>

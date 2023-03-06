@@ -328,6 +328,8 @@ inline void read_schedule(const std::filesystem::path &schedule_path,
   auto tasks = vertices(graph);
 
   for (auto &task_data : data["schedule"]) {
+    int task_id = task_data["id"];
+    assert(task_id < num_vertices(graph));
     auto plain_task = graph[static_cast<int>(task_data["id"])];
     plain_task.id = task_data["id"];
     uint32_t t_s = task_data["t_s"];
