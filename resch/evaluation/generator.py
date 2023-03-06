@@ -1,4 +1,44 @@
 from graph_tool import Graph
+from random import uniform
+
+def random(n, p, cost_func = None, comcost_func = None, num_pes = 9):
+    """
+
+    Create a random graph with the Erdös-Renyi algorithm
+
+    Args:
+        n (): number of nodes
+        p (): probability of to create an edge (i,j) with i<j
+    """
+    g = Graph()
+
+    cost = g.new_vertex_property("vector<int>")
+    comm = g.new_edge_property("int")
+
+    # Add a dummy entry and a dummy exit task
+    
+    if cost_func is None:
+        cost_func = lambda v, p : 100
+    if comcost_func is None:
+        comcost_func = lambda i, j : 100
+
+    for _ in range(n):
+        v = g.add_vertex()
+        cost[v] = [cost_func(v, p) for p in range(num_pes)]
+
+    for i in range(n):
+        for j in range(n):
+            if i < j and uniform(0, 1) < p:
+                e = g.add_edge(i, j)
+                comm[e] = comcost_func(i, j)
+
+    entry_task = g.add_vertex()
+    exit_task = g.add_vertex()
+    for v in g.vertices():
+        g.add_edge(entry_task, v)
+        g.add_edge(v, exit_task)
+
+    return g
 
 def simple_graph(num_pes = 2, num_locs = 1):
     nodes = 6
