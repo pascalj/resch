@@ -2,6 +2,7 @@ import numpy as np
 import pdb
 from math import sqrt
 from graph_tool.topology import topological_sort, shortest_path
+from graph_tool.all import graphviz_draw
 from functools import cache
  
 class TaskGraph:
@@ -12,13 +13,13 @@ class TaskGraph:
         self.c = c
         self.t = t
         self.w_bar = self.w.mean(axis=1)
-        self.c_bar = self.c.mean(axis=(2,3))
+        self.c_bar = self.c
         self.w_min = np.argmin(self.w, axis=1)
         self.init_maps()
 
     def init_maps(self):
-        self.g.vp["rank_u"] = self.g.new_vertex_property('int32_t')
-        self.g.vp["rank_d"] = self.g.new_vertex_property('int32_t')
+        self.g.vp["rank_u"] = self.g.new_vertex_property('int')
+        self.g.vp["rank_d"] = self.g.new_vertex_property('int')
 
     def from_graph(self, g):
         if 'cost' in g.vp:
@@ -43,14 +44,11 @@ class TaskGraph:
 
         if 'comm' in g.ep:
             com_cost = g.ep['comm']
-            num_locs = int(sqrt(len(com_cost[g.edges().next()])))
-            c = np.zeros((g.num_vertices(), g.num_vertices(), num_locs, num_locs))
+            c = np.zeros((g.num_vertices(), g.num_vertices()))
             for f, t, edge_cost in g.iter_edges([com_cost]):
-                for l_f in range(num_locs):
-                    for l_t in range(num_locs):
-                        c[f, t, l_f, l_t] = edge_cost[l_f * num_locs + l_t]
+                c[f, t] = edge_cost
         else:
-            c = np.zeros((g.num_vertices(), g.num_vertices(), 1, 1))
+            c = np.zeros((g.num_vertices(), g.num_vertices()))
         return (g, w, c, t)
 
     def nodes(self):
@@ -102,6 +100,7 @@ class TaskGraph:
 
     def entry_node(self):
         """ The entry node (a node without in dependencies) """
+        graphviz_draw(self.g, layout="dot")
         sort = topological_sort(self.g)
         return self.g.vertex(sort[0])
 
@@ -129,6 +128,20 @@ class TaskGraph:
             g.ep["inclusive_cost"] = weight_map
 
         return g.ep["inclusive_cost"]
+
+    def set_uniform_cost(self, cost):
+        if "cost" not in self.g.vp:
+            self.g.vp["cost"] = self.g.new_vertex_property("vector<int>");
+        for v in self.g.vertices():
+            self.g.vp.cost[v] = [cost]
+        return self
+
+    def set_uniform_comm(self, comm_cost):
+        if "comm" not in self.g.ep:
+            self.g.ep["comm"] = self.g.new_edge_property("int");
+        for e in self.g.edges():
+            self.g.ep.comm[e] = comm_cost
+        return self
 
 
     @cache

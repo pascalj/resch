@@ -1,4 +1,5 @@
 from graph_tool import Graph, GraphView, generation
+from graph_tool.topology import min_spanning_tree
 from random import uniform, randrange
 from itertools import pairwise
 
@@ -85,6 +86,9 @@ def random(n, sampler = None):
     if sampler is None:
         sampler = lambda: (randrange(3), randrange(3))
     g = generation.random_graph(n, sampler)
+    tree = min_spanning_tree(g)
+
+    g.set_edge_filter(tree)
 
     add_dummy_tasks(g)
     return g

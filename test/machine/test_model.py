@@ -15,6 +15,5 @@ class TestModel(unittest.TestCase):
         acc = Accelerator(PEs)
 
         topo = Topology.default_from_accelerator(acc)
-        graphviz_draw(topo.g, layout="dot", vprops={"label": topo.g.vp.label})
         self.assertEqual(topo.g.num_vertices(), 9)
         self.assertEqual(topo.g.num_edges(), 14)
