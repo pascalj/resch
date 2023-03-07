@@ -1,7 +1,8 @@
-from graph_tool import Graph
-from random import uniform
+from graph_tool import Graph, GraphView, generation
+from random import uniform, randrange
+from itertools import pairwise
 
-def random(n, p, cost_func = None, comcost_func = None, num_pes = 9):
+def erdos(n, p, cost_func = None, comcost_func = None, num_pes = 9):
     """
 
     Create a random graph with the Erdös-Renyi algorithm
@@ -12,8 +13,8 @@ def random(n, p, cost_func = None, comcost_func = None, num_pes = 9):
     """
     g = Graph()
 
-    cost = g.new_vertex_property("vector<int>")
-    comm = g.new_edge_property("int")
+    g.vp["cost"] = g.new_vertex_property("vector<int>")
+    g.ep["comm"] = g.new_edge_property("int")
 
     # Add a dummy entry and a dummy exit task
     
@@ -24,64 +25,99 @@ def random(n, p, cost_func = None, comcost_func = None, num_pes = 9):
 
     for _ in range(n):
         v = g.add_vertex()
-        cost[v] = [cost_func(v, p) for p in range(num_pes)]
+        g.vp["cost"][v] = [cost_func(v, p) for p in range(num_pes)]
 
     for i in range(n):
         for j in range(n):
             if i < j and uniform(0, 1) < p:
                 e = g.add_edge(i, j)
-                comm[e] = comcost_func(i, j)
+                g.ep["comm"][e] = comcost_func(i, j)
 
+    add_dummy_tasks(g)
+
+    return g
+
+def layer_by_layer(n, layers, p):
+    """
+
+    Generate a task graph with the layer-by-layer technique
+
+    Args:
+        n (): number of tasks
+        layers (): number of layers
+        p (): probability of an edge existing between two nodes in adjacent layers
+    """
+
+    g = Graph()
+
+    g.vp["cost"] = g.new_vertex_property("vector<int>")
+    g.vp["layer"] = g.new_vertex_property("int")
+    g.ep["comm"] = g.new_edge_property("int")
+
+    for _ in range(n):
+        v = g.add_vertex()
+        g.vp["layer"][v] = randrange(layers)
+   
+    for (layer_p, layer_n) in pairwise(range(layers)):
+        g_p = GraphView(g, vfilt=lambda v: g.vp["layer"][v] == layer_p)
+        g_n = GraphView(g, vfilt=lambda v: g.vp["layer"][v] == layer_n)
+
+        for v_p in g_p.get_vertices():
+            for v_n in g_n.get_vertices():
+                if uniform(0, 1) < p:
+                    g.add_edge(v_p, v_n)
+
+    add_dummy_tasks(g)
+    return g
+
+def random(n, sampler = None):
+    """
+
+    Create a uniform random task graph
+
+    Args:
+        n (): number of tasks
+        sampler (): function that returns (in_deg, out_deg) for each task
+
+    Returns:
+        
+    """
+    if sampler is None:
+        sampler = lambda: (randrange(3), randrange(3))
+    g = generation.random_graph(n, sampler)
+
+    add_dummy_tasks(g)
+    return g
+
+def add_dummy_tasks(g):
     entry_task = g.add_vertex()
     exit_task = g.add_vertex()
     for v in g.vertices():
-        g.add_edge(entry_task, v)
-        g.add_edge(v, exit_task)
+        if v != entry_task and v != exit_task:
+            g.add_edge(entry_task, v)
+            g.add_edge(v, exit_task)
 
-    return g
-
-def simple_graph(num_pes = 2, num_locs = 1):
-    nodes = 6
-    deps = [[], [0], [0], [0,1], [2], [1,3,4]]
-
-    g = gt.Graph()
-
-    cost = g.new_vertex_property("vector<int>")
-    comm = g.new_edge_property("vector<int>")
-
-    for n in range(nodes):
-        v = g.add_vertex()
-        cost[v] = [100 + (90 * p) for p in range(num_pes)]
-
-    for n in range(nodes):
-        print(n)
-        for pred in deps[n]:
-            e = g.add_edge(pred, n)
-            comm[e] = [0 if a == b else 15 for a in range(num_locs) for b in range(num_locs)]
-
-    g.vp['cost'] = cost
-    g.ep['comm'] = comm
-
-    return g
-
-def lu_graph(num_blocks):
-    g = gt.Graph()
+def lu(num_blocks, comm_cost = None, comp_cost = None):
+    g = Graph()
     g.vp["label"] = g.new_vertex_property("string")
     g.vp["it"] = g.new_vertex_property("int")
     g.vp["i"] = g.new_vertex_property("int")
     g.vp["j"] = g.new_vertex_property("int")
-    g.vp["type"] = g.new_vertex_property("int16_t")
+    g.vp["type"] = g.new_vertex_property("int")
     g.vp["cost"] = g.new_vertex_property("vector<int>")
-    g.ep["comm"] = g.new_edge_property("vector<int>")
+    g.ep["comm"] = g.new_edge_property("int")
     tasks = {}
-    
+
+    if comp_cost is None:
+        comp_cost = lambda it, i, j: [100]
+
     def gen_task(it, i, j):
         v = g.add_vertex()
         g.vp.label[v] = f'({it},{i},{j})'
         g.vp.it[v] = it 
         g.vp.i[v] = i
         g.vp.j[v] = j
-        g.vp.cost[v] = [80, 60, 100, 100]
+        g.vp.cost[v] = comp_cost(it, i, j)
         if it == i:
             if i == j:
                 g.vp.type[v] = 1 # diag
@@ -94,9 +130,12 @@ def lu_graph(num_blocks):
         tasks[(it, i, j)] = v
         return v
 
+    if comm_cost is None:
+        comm_cost = lambda e: 100
+
     def dep(v1, v2):
         e = g.add_edge(v1, v2)
-        g.ep.comm[e] = [0, 10, 10, 0]
+        g.ep.comm[e] = comm_cost(e)
 
     t = lambda it, i, j: tasks[(it, i, j)]
 
