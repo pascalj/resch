@@ -17,7 +17,9 @@ class TestBenchmark(unittest.TestCase):
         def algo(M, Gs):
             return fixtures.schedule_with_len(120)
 
-        self.assertEqual(bench.machine_benchmark(M, Gs, algo).shape, (3,4))
+        results = bench.machine_benchmark(M, Gs, algo)
+
+        self.assertEqual(results.shape, (3,4))
 
 if __name__ == '__main__':
     unittest.main()

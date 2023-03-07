@@ -100,7 +100,6 @@ class TaskGraph:
 
     def entry_node(self):
         """ The entry node (a node without in dependencies) """
-        graphviz_draw(self.g, layout="dot")
         sort = topological_sort(self.g)
         return self.g.vertex(sort[0])
 
@@ -123,7 +122,7 @@ class TaskGraph:
             weight_map = g.new_edge_property("int32_t", np.iinfo(np.int32).max)
             for v, v_idx in g.iter_vertices([g.vertex_index]):
                for f, t, e_idx, cost in g.iter_out_edges(v, [g.edge_index, g.ep['comm']]):
-                   res = self.w_bar[v_idx] + self.c_bar[f][t]
+                   res = self.w_bar[v_idx] + self.c[f][t]
                    weight_map[g.edge(f, t)] = res
             g.ep["inclusive_cost"] = weight_map
 
@@ -132,8 +131,10 @@ class TaskGraph:
     def set_uniform_cost(self, cost):
         if "cost" not in self.g.vp:
             self.g.vp["cost"] = self.g.new_vertex_property("vector<int>");
-        for v in self.g.vertices():
+        for v in self.g.get_vertices():
             self.g.vp.cost[v] = [cost]
+            self.w[v][0] = cost
+            self.w_bar[v] = cost
         return self
 
     def set_uniform_comm(self, comm_cost):
@@ -141,7 +142,14 @@ class TaskGraph:
             self.g.ep["comm"] = self.g.new_edge_property("int");
         for e in self.g.edges():
             self.g.ep.comm[e] = comm_cost
+            (src, tgt) = e
+            
+            self.c[int(src), int(tgt)] = comm_cost
+            self.c_bar[int(src), int(tgt)] = comm_cost
         return self
+
+    def show(self):
+        graphviz_draw(self.g, layout="dot")
 
 
     @cache

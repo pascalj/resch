@@ -32,7 +32,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_cp_len(self):
         G = fixtures.sample_graph()
-        self.assertEqual(metrics.cp_len(G), 450)
+        self.assertEqual(metrics.cp_len(G), 475)
 
     def test_sequential(self):
         G = fixtures.sample_graph()
