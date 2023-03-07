@@ -14,7 +14,9 @@ def minimal_machine():
     locations = [m.Location(0)]
     config = m.Configuration(0, locations)
     PEs = [m.PE(0, config, {})]
-    return m.MachineModel(PEs)
+    acc = m.Accelerator(PEs)
+    topo = m.Topology.default_from_accelerator(acc)
+    return m.Machine(acc, topo, m.Properties())
 
 def instance(pe, location, interval):
     return s.Instance(pe, location, interval)

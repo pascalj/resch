@@ -1,4 +1,5 @@
 from collections import defaultdict
+from graph_tool.all import Graph
 
 class IndexEqualityMixin(object):
     def __eq__(self, other):
@@ -41,9 +42,7 @@ class PE:
     def __hash__(self):
         return hash((self.index))
 
-
-# TODO: rename to Model
-class MachineModel:
+class Accelerator:
     def __init__(self, PEs):
         self.PEs = PEs
 
@@ -60,29 +59,68 @@ class MachineModel:
                 locations.add(loc)
         return locations
 
-    def instances(self):
-        instances = []
-        for config in self.configurations():
-            for location in config.locations:
-                for pe in config.PEs:
-                    instances.append(schedule.Instance(pe, location))
-        return instances
+class Properties:
+    def __init__(self, pe_properties = {}, c_properties = {}, l_properties = {}):
+        self.P_p = pe_properties
+        self.P_c = c_properties
+        self.P_l = l_properties
 
-def get_pr(num_PEs, num_slots):
-    locations = [Location(l_id) for l_id in range(num_slots)]
-    PEs = []
-    for pe_id in range(num_PEs):
-        config = Configuration(pe_id, locations)
-        PEs.append(PE(pe_id, config, {}))
-    return MachineModel(PEs)
+class Topology:
+    def __init__(self, g = None):
+        self.g = g
 
-# Get a non-PR machine with a mapping of config_to_PEs
-def get_r(config_to_PEs, locs = [0], rho = 15):
-    locations = [Location(l, {'c': rho}) for l in locs]
-    PEs = []
-    for config, pes in enumerate(config_to_PEs):
-        config = Configuration(config, locations)
-        for pe in pes:
-            properties = {'t' : pe + 1}
-            PEs.append(PE(pe, config, properties))
-    return MachineModel(PEs)
+    @classmethod
+    def default_from_accelerator(cls, acc):
+        g = Graph()
+        g.vp["label"] = g.new_vertex_property("string");
+
+        loc_vertices = {}
+        tx_vertices = {}
+        rx_vertices = {}
+
+        # Add all location-related vertices
+        for loc in acc.locations():
+            # Add location vertex
+            v = g.add_vertex()
+            g.vp.label[v] = "Location " + str(loc.index)
+            loc_vertices[loc.index] = v
+
+            # Add receive vertex
+            rx = g.add_vertex()
+            g.vp.label[rx] = "rx " + str(loc.index)
+
+            # Add transmit vertex
+            tx = g.add_vertex()
+            g.vp.label[tx] = "tx " + str(loc.index)
+
+            tx_vertices[loc.index] = tx
+            rx_vertices[loc.index] = rx
+
+            # Connect the rx and tx edges
+            g.add_edge(v, tx)
+            g.add_edge(rx, v)
+
+        # Add PE specific nodes
+        for config in acc.configurations():
+            for pe in config.PEs:
+                v = g.add_vertex()
+                g.vp.label[v] = "PE " + str(pe.index)
+
+                # Wire it up to eligible locations
+                for loc in config.locations:
+                    assert(loc.index in tx_vertices)
+                    assert(loc.index in rx_vertices)
+                    rx = rx_vertices[loc.index]
+                    tx = tx_vertices[loc.index]
+                    g.add_edge(v, rx)
+                    g.add_edge(tx, v)
+        return cls(g)
+
+class Machine:
+    def __init__(self, acc, topo, properties):
+        self.accelerator = acc
+        self.topology = topo
+        self.properties = properties
+
+    def get_pe(self, index):
+        return self.accelerator.get_pe(index)
