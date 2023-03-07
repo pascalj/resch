@@ -89,15 +89,20 @@ def random(n, sampler = None):
     add_dummy_tasks(g)
     return g
 
-def add_dummy_tasks(g):
-    entry_task = g.add_vertex()
-    exit_task = g.add_vertex()
-    for v in g.vertices():
-        if v != entry_task and v != exit_task:
-            g.add_edge(entry_task, v)
-            g.add_edge(v, exit_task)
 
 def lu(num_blocks, comm_cost = None, comp_cost = None):
+    """
+
+    Generate a task graph for the blocked LU decomposition
+
+    Args:
+        num_blocks (): number of blocks in both i and j directions
+        comm_cost (): lambda setting the computational cost
+        comp_cost (): lambda setting the communication cost
+
+    Returns:
+        
+    """
     g = Graph()
     g.vp["label"] = g.new_vertex_property("string")
     g.vp["it"] = g.new_vertex_property("int")
@@ -164,3 +169,18 @@ def lu(num_blocks, comm_cost = None, comp_cost = None):
                     dep(t(it - 1, i, j), t(it, i, j))
 
     return g
+
+def add_dummy_tasks(g):
+    """
+
+    Add an empty entry and exit task
+
+    Args:
+        g (): graph to change
+    """
+    entry_task = g.add_vertex()
+    exit_task = g.add_vertex()
+    for v in g.vertices():
+        if v != entry_task and v != exit_task:
+            g.add_edge(entry_task, v)
+            g.add_edge(v, exit_task)
