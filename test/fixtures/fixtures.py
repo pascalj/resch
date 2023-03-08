@@ -21,14 +21,14 @@ def single_config_machine(num_PEs = 1, num_locs = 1):
     topo = m.Topology.default_from_accelerator(acc)
     return m.Machine(acc, topo, m.Properties())
 
-def instance(pe, location, interval):
-    return s.Instance(pe, location, interval)
+def instance(task, pe, location, interval):
+    return s.Instance(task, pe, location, interval)
 
 def task_with_len(slen):
     machine = minimal_machine()
     task = s.Task(0, "task", slen, [])
     interval = po.closedopen(0, slen)
-    return s.ScheduledTask(task, instance(machine.get_pe(0), m.Location(0), interval))
+    return s.ScheduledTask(task, instance(task, machine.get_pe(0), m.Location(0), interval))
 
 def schedule_with_len(slen):
     S = s.Schedule()

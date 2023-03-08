@@ -4,11 +4,12 @@ from collections import defaultdict
 import portion as po
 
 class Instance:
-    def __init__(self, pe, location, interval):
+    def __init__(self, task, pe, location, interval):
         self.config = pe.configuration
         self.pe = pe
         self.location = location
         self.interval = interval
+        self.task = task
 
 class Schedule:
     def __init__(self):
@@ -31,8 +32,6 @@ class Schedule:
         assert(task.index is not None)
         assert(p.index is not None)
         assert(loc.index is not None)
-
-        p_tasks = [t for t in self.tasks if t.pe == p and loc == t.location]
 
         available = earliest
 
@@ -65,3 +64,13 @@ class Schedule:
         self.A_p[p_id][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id
+
+    def __str__(self):
+        ret = ""
+        for loc, interval in self.A_l.items():
+            ret += f"Location {loc}\n\t{interval}\n"
+
+        for pe, interval in self.A_p.items():
+            ret += f"PE {pe}\n\t{interval}\n"
+        return ret
+            

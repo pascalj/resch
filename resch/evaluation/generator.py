@@ -39,9 +39,7 @@ def layer_by_layer(n, layers, p):
 
     g = Graph()
 
-    g.vp["cost"] = g.new_vertex_property("vector<int>")
     g.vp["layer"] = g.new_vertex_property("int")
-    g.ep["comm"] = g.new_edge_property("int")
 
     for _ in range(n):
         v = g.add_vertex()
@@ -57,6 +55,7 @@ def layer_by_layer(n, layers, p):
                     g.add_edge(v_p, v_n)
 
     add_dummy_tasks(g)
+    add_cost(g)
     return g
 
 def random(n, sampler = None):
