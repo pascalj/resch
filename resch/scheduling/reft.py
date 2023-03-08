@@ -16,7 +16,8 @@ class REFT:
         for task in sorted_tasks:
             # TODO: min start time
             earliest = po.closedopen(0, po.inf)
-            min = po.singleton(po.inf)
+
+            min = po.closedopen(0, po.inf)
             min_p = None
             min_l = None
             for p in self.M.PEs():
@@ -27,7 +28,7 @@ class REFT:
                         min_p = p
                         min_l = l
 
-            instance = schedule.Instance(p, l, interval)
+            instance = schedule.Instance(min_p, min_l, interval)
             scheduled_task = task_m.ScheduledTask(task, instance)
             self.S.add_task(scheduled_task)
 

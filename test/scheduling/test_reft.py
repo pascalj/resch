@@ -21,3 +21,11 @@ class TestREFT(unittest.TestCase):
         S = reft.REFT(M, G).schedule()
 
         self.assertEqual(len(S.tasks), G.num_nodes())
+
+    def test_reft_random_complex(self):
+        M = fixtures.single_config_machine(num_PEs = 3, num_locs = 2)
+        G = graph.TaskGraph(generator.random(12))
+        S = reft.REFT(M, G).schedule()
+
+        print([(i.interval, i.pe.index) for i in S.instances])
+        self.assertEqual(len(S.tasks), G.num_nodes())

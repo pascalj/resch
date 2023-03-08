@@ -11,9 +11,12 @@ def empty_schedule():
     return s.Schedule()
 
 def minimal_machine():
-    locations = [m.Location(0)]
+    return single_config_machine(num_PEs = 1, num_locs = 1)
+
+def single_config_machine(num_PEs = 1, num_locs = 1):
+    locations = [m.Location(i) for i in range(num_locs)]
     config = m.Configuration(0, locations)
-    PEs = [m.PE(0, config, {})]
+    PEs = [m.PE(i, config, {}) for i in range(num_PEs)]
     acc = m.Accelerator(PEs)
     topo = m.Topology.default_from_accelerator(acc)
     return m.Machine(acc, topo, m.Properties())

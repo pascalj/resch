@@ -14,25 +14,13 @@ def erdos(n, p, cost_func = None, comcost_func = None, num_pes = 9):
     """
     g = Graph()
 
-    g.vp["cost"] = g.new_vertex_property("vector<int>")
-    g.ep["comm"] = g.new_edge_property("int")
-
-    # Add a dummy entry and a dummy exit task
-    
-    if cost_func is None:
-        cost_func = lambda v, p : 100
-    if comcost_func is None:
-        comcost_func = lambda i, j : 100
-
     for _ in range(n):
-        v = g.add_vertex()
-        g.vp["cost"][v] = [cost_func(v, p) for p in range(num_pes)]
+        g.add_vertex()
 
     for i in range(n):
         for j in range(n):
             if i < j and uniform(0, 1) < p:
                 e = g.add_edge(i, j)
-                g.ep["comm"][e] = comcost_func(i, j)
 
     add_dummy_tasks(g)
 
@@ -91,6 +79,8 @@ def random(n, sampler = None):
     g.set_edge_filter(tree)
 
     add_dummy_tasks(g)
+    add_cost(g)
+
     return g
 
 
@@ -188,3 +178,29 @@ def add_dummy_tasks(g):
         if v != entry_task and v != exit_task:
             g.add_edge(entry_task, v)
             g.add_edge(v, exit_task)
+
+def add_cost(g, cost_func = None, comcost_func = None, num_PEs = 9):
+    """
+
+    Add computation cost and communication cost if not present
+
+    Args:
+        g (): Graph to change
+        cost_func (): compute cost function (v, p) -> int
+        comcost_func ():  communication cost function e -> int
+        num_PEs (): how many PEs should we generator for?
+    """
+    if "cost" not in g.vp:
+        g.vp["cost"] = g.new_vertex_property("vector<int>")
+        if cost_func is None:
+            cost_func = lambda v, p : 100
+        for v in g.get_vertices():
+            g.vp["cost"][v] = [cost_func(v, p) for p in range(num_PEs)]
+
+    if "comm" not in g.ep:
+        g.ep["comm"] = g.new_edge_property("int")
+        if comcost_func is None:
+            comcost_func = lambda i, j : 10
+        for i, j in g.edges():
+            edge = g.edge(i, j)
+            g.ep["comm"][edge] = comcost_func(i, j)

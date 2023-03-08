@@ -34,7 +34,6 @@ class TaskGraph:
         else:
             w = np.zeros((g.num_vertices(), 1))
 
-
         t = np.zeros((g.num_vertices()))
 
         if 'type' in g.vp:
