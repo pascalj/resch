@@ -25,7 +25,7 @@ def task_with_len(slen):
     machine = minimal_machine()
     task = s.Task(0, "task", slen, [])
     interval = po.closedopen(0, slen)
-    return s.ScheduledTask(task, interval, instance(machine.get_pe(0), m.Location(0), instance))
+    return s.ScheduledTask(task, instance(machine.get_pe(0), m.Location(0), interval))
 
 def schedule_with_len(slen):
     S = s.Schedule()
