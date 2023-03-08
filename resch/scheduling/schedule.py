@@ -36,7 +36,7 @@ class Schedule:
         available = earliest
 
         # Remove other tasks on the same PE
-        available = available - self.A_p[p.index].domain()
+        available = available - self.A_p[(p.index, loc.index)].domain()
 
         # Remove other instances on the same location with different configs
         for c_interval, c_id in self.A_l[loc.index].items():
@@ -60,8 +60,8 @@ class Schedule:
         t_id = task.index
 
         # Ensure sure that the PE is not executing any other task
-        assert(not self.A_p[p_id].domain().overlaps(instance.interval))
-        self.A_p[p_id][instance.interval] = t_id
+        assert(not self.A_p[(p_id, l_id)].domain().overlaps(instance.interval))
+        self.A_p[(p_id, l_id)][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id
 
@@ -72,5 +72,6 @@ class Schedule:
 
         for pe, interval in self.A_p.items():
             ret += f"PE {pe}\n\t{interval}\n"
+
         return ret
             
