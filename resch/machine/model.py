@@ -124,3 +124,9 @@ class Machine:
 
     def get_pe(self, index):
         return self.accelerator.get_pe(index)
+
+    def PEs(self):
+        return self.accelerator.PEs
+
+    def locations(self):
+        return self.accelerator.locations()

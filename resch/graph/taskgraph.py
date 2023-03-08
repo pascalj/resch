@@ -4,6 +4,7 @@ from math import sqrt
 from graph_tool.topology import topological_sort, shortest_path
 from graph_tool.all import graphviz_draw
 from functools import cache
+from resch.scheduling import task
  
 class TaskGraph:
     def __init__(self, g):
@@ -41,12 +42,11 @@ class TaskGraph:
             for v in g.iter_vertices():
                 t[v] = ttype[v]
 
-
         if 'comm' in g.ep:
             com_cost = g.ep['comm']
             c = np.zeros((g.num_vertices(), g.num_vertices()))
-            for f, t, edge_cost in g.iter_edges([com_cost]):
-                c[f, t] = edge_cost
+            for s, d, edge_cost in g.iter_edges([com_cost]):
+                c[s, d] = edge_cost
         else:
             c = np.zeros((g.num_vertices(), g.num_vertices()))
         return (g, w, c, t)
@@ -100,14 +100,28 @@ class TaskGraph:
 
     def entry_node(self):
         """ The entry node (a node without in dependencies) """
-        sort = topological_sort(self.g)
+        sort = self.sorted_topologically()
         return self.g.vertex(sort[0])
 
     def exit_node(self):
         """ The exit node (a node without out dependencies) """
-        sort = topological_sort(self.g)
+        sort = self.sorted_topologically()
         return self.g.vertex(sort[-1])
 
+    def sorted_topologically(self):
+        return topological_sort(self.g)
+
+    def sorted_by_urank(self):
+        sorted_ids = sorted(self.g.get_vertices(), key = lambda v: self.g.vp.rank_u[v])
+        return [self.task(id) for id in sorted_ids]
+
+    def task(self, node_id):
+        label = f"Task {node_id}"
+        if "label" in self.g.vp:
+            label = self.g.vp.label[node_id]
+        cost = self.w[node_id]
+        ttype = self.t[node_id]
+        return task.Task(node_id, label, cost, ttype)
 
     def inclusive_cost_map(self):
         """ Returns an edge property map with computing cost included
