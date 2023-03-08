@@ -111,7 +111,7 @@ class TaskGraph:
         return topological_sort(self.g)
 
     def sorted_by_urank(self):
-        sorted_ids = sorted(self.g.get_vertices(), key = lambda v: self.g.vp.rank_u[v])
+        sorted_ids = sorted(self.g.get_vertices(), key = lambda v: -(self.rank_u(v)))
         return [self.task(id) for id in sorted_ids]
 
     def task(self, node_id):
@@ -121,6 +121,9 @@ class TaskGraph:
         cost = self.w[node_id]
         ttype = self.t[node_id]
         return task.Task(node_id, label, cost, ttype)
+
+    def dependencies(self, task_id):
+        return self.g.vertex(task_id).in_neighbors()
 
     def inclusive_cost_map(self):
         """ Returns an edge property map with computing cost included
@@ -173,7 +176,6 @@ class TaskGraph:
                 default=0)
         self.g.vp['rank_u'][v] = value
         return value
-
 
     @cache
     def rank_d(self, v):
