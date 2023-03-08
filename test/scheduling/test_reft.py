@@ -27,5 +27,4 @@ class TestREFT(unittest.TestCase):
         G = graph.TaskGraph(generator.random(12))
         S = reft.REFT(M, G).schedule()
 
-        print([(i.interval, i.pe.index) for i in S.instances])
         self.assertEqual(len(S.tasks), G.num_nodes())

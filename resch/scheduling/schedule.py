@@ -22,7 +22,7 @@ class Schedule:
         self.add_instance(task)
 
     def length(self):
-        return max([task.t_s + task.cost for task in self.tasks], default=0)
+        return max([i.interval.upper for i in self.instances], default=0)
 
     def task(self, v):
         return next(iter([t for t in self.tasks if t.index == v]), None)
@@ -31,8 +31,6 @@ class Schedule:
         assert(task.index is not None)
         assert(p.index is not None)
         assert(loc.index is not None)
-
-        l_c = loc.properties.get('c', 0)
 
         p_tasks = [t for t in self.tasks if t.pe == p and loc == t.location]
 
