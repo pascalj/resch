@@ -1,5 +1,6 @@
 from collections import defaultdict
 from graph_tool.all import Graph
+from graph_tool.topology import shortest_path
 
 class IndexEqualityMixin(object):
     def __eq__(self, other):
@@ -115,6 +116,31 @@ class Topology:
                     g.add_edge(v, rx)
                     g.add_edge(tx, v)
         return cls(g)
+
+    def path(self, src, dst):
+        """
+
+        Get the shortest path (edges) from a node to another
+
+        Args:
+            from (): Vertex
+            to (): Vertex
+
+        Returns: [Edge]
+            
+        """
+        (vertices, edges) = shortest_path(self.g, src, dst)
+        return edges
+
+    def relative_capacity(self, link):
+        """
+        Get the relative capacity from 0 < c <= 1
+
+        Args:
+            link (): the edge in the topology
+        """
+        return self.g.ep.capacity[link]
+
 
 class Machine:
     def __init__(self, acc, topo, properties):

@@ -75,3 +75,47 @@ class Schedule:
 
         return ret
             
+class NoEdgeSchedule:
+    def __init__(self, G, topology):
+        pass
+
+    def data_ready_time(self, src, dst, t_f, edge):
+        dependencies = [int(i) for i in self.G.dependencies(task_id)]
+        return max(
+                [instance.interval.upper for instance in self.S.instances
+                    if instance.task.index in dependencies],
+                default=0)
+
+
+class EdgeSchedule:
+    def __init__(self, G, topology):
+        self.A_l = defaultdict(lambda: po.IntervalDict()) # link -> intervals
+        self.G
+        self.topo = topology
+
+    def data_ready_time(self, src, dst, t_f, edge):
+        cost = self.G.c[edge]
+        path = self.topo.path(src, dst)
+        available = po.closedopen(t_f, po.inf)
+        min_capacity = min(self.topo.relative_capacity(link) for link in path)
+        for link in path:
+            available = available - self.A_e[link]
+
+        max_link_cost = cost / min_capacity
+
+        for interval in available:
+            if po.singleton(interval.lower + max_link_cost) <= interval:
+                 upper = interval.lower + max_link_cost
+                 break
+
+    def allocate_path(self, src, dst, edge, upper):
+        path = self.topo.path(src, dst)
+        for link in path:
+            self.allocate_edge(self, link, edge, upper)
+
+    def allocate_edge(self, link, edge, upper):
+        link_cost = self.G.c[edge] * self.relative_capacity(link)
+        interval = po.closedopen(upper - link_cost, upper)
+        assert((self.A_l[link].domain() & interval).empty())
+        self.A_l[link][interval] = edge
+

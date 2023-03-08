@@ -5,17 +5,21 @@ import resch.scheduling.schedule as schedule
 import resch.scheduling.task as task_m
 
 class REFT:
-    def __init__(self, M, G):
+    def __init__(self, M, G, E = lambda G, M: schedule.NoEdgeSchedule(G, M.topology)):
         self.M = M
         self.G = G
         self.S = schedule.Schedule()
+        self.E = E(G, M)
 
     def schedule(self):
         sorted_tasks = self.G.sorted_by_urank()
 
         for task in sorted_tasks:
-            # TODO: min start time
-            earliest = po.closedopen(self.data_ready_time(task.index), po.inf)
+            # TODO: this needs to happen per dependency (see scheduly.py:83)
+            # and should move the t_s for task back for each of the
+            # dependencies. This means for EdgeSchedule there must be something
+            # equivalent to equivalent to ll schedule.py:84
+            earliest = po.closedopen(self.E.data_ready_time(), po.inf)
 
             min = po.closedopen(0, po.inf)
             min_p = None
@@ -40,3 +44,4 @@ class REFT:
                 [instance.interval.upper for instance in self.S.instances
                     if instance.task.index in dependencies],
                 default=0)
+        
