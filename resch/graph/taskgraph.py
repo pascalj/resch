@@ -144,6 +144,12 @@ class TaskGraph:
 
         return g.ep["inclusive_cost"]
 
+    def edge(self, src_task, dst_task):
+        return self.g.edge(src_task.index, dst_task.index)
+
+    def edge_cost(self, src_task, dst_task):
+        return self.g.ep.comm[self.g.edge(src_task.index, dst_task.index)]
+
     def set_uniform_cost(self, cost):
         if "cost" not in self.g.vp:
             self.g.vp["cost"] = self.g.new_vertex_property("vector<int>");

@@ -77,15 +77,17 @@ class Schedule:
             
 class NoEdgeSchedule:
     def __init__(self, G, topology):
-        pass
+        self.G = G
+        self.topo = topology
 
-    def data_ready_time(self, src, dst, t_f, edge):
-        dependencies = [int(i) for i in self.G.dependencies(task_id)]
-        return max(
-                [instance.interval.upper for instance in self.S.instances
-                    if instance.task.index in dependencies],
-                default=0)
+    def edge_finish_time(self, src_instance, dst, is_local):
+        t_f = src_instance.interval.upper
+        if is_local:
+            return t_f
 
+        edge_cost = self.G.edge_cost(src_instance.task, dst)
+
+        return t_f + edge_cost
 
 class EdgeSchedule:
     def __init__(self, G, topology):

@@ -19,13 +19,13 @@ class REFT:
             # and should move the t_s for task back for each of the
             # dependencies. This means for EdgeSchedule there must be something
             # equivalent to equivalent to ll schedule.py:84
-            earliest = po.closedopen(self.E.data_ready_time(), po.inf)
 
             min = po.closedopen(0, po.inf)
             min_p = None
             min_l = None
             for l in self.M.locations():
                 for p in self.M.PEs():
+                    earliest = po.closedopen(self.data_ready_time(task, p.index), po.inf)
                     interval = self.S.EFT(task, p, l, earliest)
                     if interval.upper < min.upper: # earliest finish time 8)
                         min = interval
@@ -38,10 +38,14 @@ class REFT:
 
         return self.S
 
-    def data_ready_time(self, task_id):
-        dependencies = [int(i) for i in self.G.dependencies(task_id)]
-        return max(
-                [instance.interval.upper for instance in self.S.instances
-                    if instance.task.index in dependencies],
-                default=0)
+    def data_ready_time(self, task, PE_index):
+        dependencies = [int(i) for i in self.G.dependencies(task.index)]
+
+        instances = []
+        for instance in self.S.instances:
+            if instance.task.index in dependencies:
+                is_local = PE_index == instance.pe.index
+                self.E.edge_finish_time(instance, task, is_local)
+                instances.append(instance)
         
+        return max([i.interval.upper for i in instances], default=0)
