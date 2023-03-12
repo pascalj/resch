@@ -1,6 +1,7 @@
 from collections import defaultdict
-from graph_tool.all import Graph
+from graph_tool.all import Graph, GraphView
 from graph_tool.topology import shortest_path
+from graph_tool.util import find_vertex
 
 class IndexEqualityMixin(object):
     def __eq__(self, other):
@@ -67,13 +68,20 @@ class Properties:
         self.P_l = l_properties
 
 class Topology:
-    def __init__(self, g = None):
+    def __init__(self, g = None, PE_map = {}):
         self.g = g
+        self.PE_g = GraphView(g, vfilt=self.g.vp.is_PE)
+        self.PE_map = PE_map
 
     @classmethod
     def default_from_accelerator(cls, acc):
         g = Graph()
         g.vp["label"] = g.new_vertex_property("string");
+        g.vp["PE"] = g.new_vertex_property("int");
+        g.vp["is_PE"] = g.new_vertex_property("bool");
+        g.vp["location"] = g.new_vertex_property("int");
+
+        g.ep["capacity"] = g.new_edge_property("float");
 
         loc_vertices = {}
         tx_vertices = {}
@@ -98,24 +106,36 @@ class Topology:
             rx_vertices[loc.index] = rx
 
             # Connect the rx and tx edges
-            g.add_edge(v, tx)
-            g.add_edge(rx, v)
+            rx_edge = g.add_edge(rx, v)
+            tx_edge = g.add_edge(v, tx)
 
+            g.ep.capacity[rx_edge] = 1
+            g.ep.capacity[tx_edge] = 1
+
+        PE_map = {}
         # Add PE specific nodes
         for config in acc.configurations():
             for pe in config.PEs:
-                v = g.add_vertex()
-                g.vp.label[v] = "PE " + str(pe.index)
 
                 # Wire it up to eligible locations
                 for loc in config.locations:
+                    v = g.add_vertex()
+                    g.vp.label[v] = "PE " + str(pe.index)
+                    g.vp.PE[v] = pe.index
+                    g.vp.is_PE[v] = True
+                    g.vp.location[v] = loc.index
+                    PE_map[(pe.index, loc.index)] = v
+
                     assert(loc.index in tx_vertices)
                     assert(loc.index in rx_vertices)
                     rx = rx_vertices[loc.index]
                     tx = tx_vertices[loc.index]
-                    g.add_edge(v, rx)
-                    g.add_edge(tx, v)
-        return cls(g)
+                    rx_edge = g.add_edge(v, rx)
+                    tx_edge =g.add_edge(tx, v)
+
+                    g.ep.capacity[rx_edge] = 1
+                    g.ep.capacity[tx_edge] = 1
+        return cls(g, PE_map = PE_map)
 
     def path(self, src, dst):
         """
@@ -131,6 +151,15 @@ class Topology:
         """
         (vertices, edges) = shortest_path(self.g, src, dst)
         return edges
+
+    def pe_path(self, src_placed, dst_placed):
+        assert(src_placed in self.PE_map)
+        assert(dst_placed in self.PE_map);
+
+        src_node = self.PE_map[src_placed] 
+        dst_node = self.PE_map[dst_placed] 
+
+        return self.path(src_node, dst_node)
 
     def relative_capacity(self, link):
         """

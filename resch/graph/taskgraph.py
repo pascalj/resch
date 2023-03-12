@@ -122,8 +122,8 @@ class TaskGraph:
         ttype = self.t[node_id]
         return task.Task(node_id, label, cost, ttype)
 
-    def dependencies(self, task_id):
-        return self.g.vertex(task_id).in_neighbors()
+    def dependencies(self, task):
+        return self.g.vertex(task.index).in_neighbors()
 
     def inclusive_cost_map(self):
         """ Returns an edge property map with computing cost included

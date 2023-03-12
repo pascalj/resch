@@ -15,5 +15,5 @@ class TestModel(unittest.TestCase):
         acc = Accelerator(PEs)
 
         topo = Topology.default_from_accelerator(acc)
-        self.assertEqual(topo.g.num_vertices(), 9)
+        self.assertEqual(topo.g.num_vertices(), 11) # 2 x 2 locations, 1 x 1 location, 2 x tx, 2 x rx, 2 x loc
         self.assertEqual(topo.g.num_edges(), 14)

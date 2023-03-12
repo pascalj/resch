@@ -11,6 +11,9 @@ class Instance:
         self.interval = interval
         self.task = task
 
+    def placed_pe(self):
+        return (self.pe.index, self.location.index)
+
 class Schedule:
     def __init__(self):
         self.tasks = []
@@ -60,10 +63,15 @@ class Schedule:
         t_id = task.index
 
         # Ensure sure that the PE is not executing any other task
-        assert(not self.A_p[(p_id, l_id)].domain().overlaps(instance.interval))
+        if self.A_p[(p_id, l_id)].domain().overlaps(instance.interval):
+            assert(False)
         self.A_p[(p_id, l_id)][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id
+
+    def instances_for_tasks(self, tasks):
+        int_tasks = [int(t) for t in tasks]
+        return [i for i in self.instances if i.task.index in int_tasks]
 
     def __str__(self):
         ret = ""
@@ -76,11 +84,12 @@ class Schedule:
         return ret
             
 class NoEdgeSchedule:
-    def __init__(self, G, topology):
+    def __init__(self, G, M):
         self.G = G
-        self.topo = topology
+        self.topo = M.topology
 
-    def edge_finish_time(self, src_instance, dst, is_local):
+    def edge_finish_time(self, src_instance, dst, dst_PE, dst_loc):
+        is_local = (dst_PE == src_instance.pe and dst_loc == src_instance.location)
         t_f = src_instance.interval.upper
         if is_local:
             return t_f
@@ -89,35 +98,81 @@ class NoEdgeSchedule:
 
         return t_f + edge_cost
 
-class EdgeSchedule:
-    def __init__(self, G, topology):
-        self.A_l = defaultdict(lambda: po.IntervalDict()) # link -> intervals
-        self.G
-        self.topo = topology
+    def add_task(self, task, _):
+        pass
 
-    def data_ready_time(self, src, dst, t_f, edge):
-        cost = self.G.c[edge]
-        path = self.topo.path(src, dst)
-        available = po.closedopen(t_f, po.inf)
+    def allocate_path(self, instance, *arg):
+        return po.singleton(instance.interval.upper)
+
+    def __str__(self):
+        return "No edge schedule"
+
+class EdgeSchedule:
+    def __init__(self, G, M):
+        self.A_l = defaultdict(lambda: po.IntervalDict()) # link -> intervals
+        self.G = G
+        self.topo = M.topology
+
+    def edge_finish_time(self, src_instance, dst_task, dst_PE, dst_loc):
+        is_local = (dst_PE == src_instance.pe and dst_loc == src_instance.location)
+        t_f = src_instance.interval.upper
+        if is_local:
+            return t_f
+
+        cost = self.G.edge_cost(src_instance.task, dst_task)
+        path = self.topo.pe_path(src_instance.placed_pe(), (dst_PE.index, dst_loc.index))
+
+        available_interval = self.available_path_interval(path, cost, t_f)
+
+        return available_interval.upper
+
+
+    def available_path_interval(self, path, cost, lower_bound):
+        available = po.closedopen(lower_bound, po.inf)
         min_capacity = min(self.topo.relative_capacity(link) for link in path)
         for link in path:
-            available = available - self.A_e[link]
+            available = available - self.A_l[link].domain()
 
         max_link_cost = cost / min_capacity
 
+        upper = lower_bound
         for interval in available:
             if po.singleton(interval.lower + max_link_cost) <= interval:
                  upper = interval.lower + max_link_cost
-                 break
+                 return po.closedopen(interval.lower, interval.lower + max_link_cost)
 
-    def allocate_path(self, src, dst, edge, upper):
-        path = self.topo.path(src, dst)
+        assert(False)
+
+    # def add_task(self, src_instance, scheduled_task):
+    #     if src_instance.pe == scheduled_task.instance.pe:
+    #         return
+
+    #     self.allocate_path(src_instance, scheduled_task, scheduled_task.instance.interval.lower)
+
+    def allocate_path(self, src_instance, dst_task, dst_PE, dst_loc):
+        path = self.topo.pe_path(src_instance.placed_pe(), (dst_PE.index, dst_loc.index))
+        if len(path) == 0:
+            return po.singleton(src_instance.interval.upper)
+
+        cost = self.G.edge_cost(src_instance.task, dst_task)
+        lower_bound = src_instance.interval.upper
+
+        interval = self.available_path_interval(path, cost, lower_bound)
+
         for link in path:
-            self.allocate_edge(self, link, edge, upper)
+            self.allocate_edge(link, src_instance, dst_task, cost, interval)
 
-    def allocate_edge(self, link, edge, upper):
-        link_cost = self.G.c[edge] * self.relative_capacity(link)
-        interval = po.closedopen(upper - link_cost, upper)
-        assert((self.A_l[link].domain() & interval).empty())
-        self.A_l[link][interval] = edge
+        return interval
 
+    def allocate_edge(self, link, src_instance, dst_task, cost, interval):
+        link_cost = cost / self.topo.relative_capacity(link)
+        link_interval = po.closedopen(interval.upper - link_cost, interval.upper)
+        assert(not self.A_l[link].domain().overlaps(interval))
+        self.A_l[link][interval] = (src_instance.task.index, dst_task.index)
+
+    def __str__(self):
+        ret = ""
+        for link, interval in self.A_l.items():
+            ret += f"Link {link}\n\t{interval}\n"
+
+        return ret
