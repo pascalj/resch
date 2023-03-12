@@ -31,7 +31,7 @@ class TestREFT(unittest.TestCase):
         self.assertEqual(len(S.tasks), G.num_nodes())
 
     def test_reft_random_edge(self):
-        M = fixtures.single_config_machine(num_PEs = 2, num_locs = 1)
+        M = fixtures.single_config_machine(num_PEs = 2, num_locs = 2)
         G = graph.TaskGraph(generator.random(25))
         S = reft.REFT(M, G, schedule.EdgeSchedule).schedule()
 

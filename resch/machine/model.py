@@ -2,6 +2,7 @@ from collections import defaultdict
 from graph_tool.all import Graph, GraphView
 from graph_tool.topology import shortest_path
 from graph_tool.util import find_vertex
+from graph_tool.draw import graphviz_draw
 
 class IndexEqualityMixin(object):
     def __eq__(self, other):
@@ -112,6 +113,17 @@ class Topology:
             g.ep.capacity[rx_edge] = 1
             g.ep.capacity[tx_edge] = 1
 
+        locs = list(acc.locations())
+        for lhs, rhs in zip(locs, locs[1:]):
+            lhs_loc = loc_vertices[lhs.index]
+            rhs_loc = loc_vertices[rhs.index]
+
+            rx_edge = g.add_edge(lhs_loc, rhs_loc)
+            tx_edge = g.add_edge(rhs_loc, lhs_loc)
+
+            g.ep.capacity[rx_edge] = 1
+            g.ep.capacity[tx_edge] = 1
+
         PE_map = {}
         # Add PE specific nodes
         for config in acc.configurations():
@@ -120,7 +132,7 @@ class Topology:
                 # Wire it up to eligible locations
                 for loc in config.locations:
                     v = g.add_vertex()
-                    g.vp.label[v] = "PE " + str(pe.index)
+                    g.vp.label[v] = f"PE {pe.index}@{loc.index}"
                     g.vp.PE[v] = pe.index
                     g.vp.is_PE[v] = True
                     g.vp.location[v] = loc.index
@@ -135,6 +147,7 @@ class Topology:
 
                     g.ep.capacity[rx_edge] = 1
                     g.ep.capacity[tx_edge] = 1
+
         return cls(g, PE_map = PE_map)
 
     def path(self, src, dst):
@@ -158,8 +171,13 @@ class Topology:
 
         src_node = self.PE_map[src_placed] 
         dst_node = self.PE_map[dst_placed] 
+        path = self.path(src_node, dst_node)
 
-        return self.path(src_node, dst_node)
+        assert(src_placed == dst_placed or src_node != dst_node)
+        assert(src_placed == dst_placed or len(path) > 0)
+
+        return path
+
 
     def relative_capacity(self, link):
         """
@@ -169,6 +187,9 @@ class Topology:
             link (): the edge in the topology
         """
         return self.g.ep.capacity[link]
+
+    def show(self):
+        graphviz_draw(self.g, layout="dot")
 
 
 class Machine:
