@@ -73,6 +73,12 @@ class Schedule:
         int_tasks = [int(t) for t in tasks]
         return [i for i in self.instances if i.task.index in int_tasks]
 
+    def to_csv(self, file_handle):
+        rows = [f"{i.config.index},{i.pe.index},{i.location.index},{i.interval.lower},{i.interval.upper},{i.task.index}\n"
+            for i in self.instances]
+            
+        file_handle.writelines(rows)
+
     def __str__(self):
         ret = ""
         for loc, interval in self.A_l.items():

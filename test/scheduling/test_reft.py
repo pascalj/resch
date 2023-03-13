@@ -14,6 +14,8 @@ class TestREFT(unittest.TestCase):
         G = fixtures.sample_graph()
         S = reft.REFT(M, G).schedule()
 
+        with open("test_reft.csv", "w"):
+            S.to_csv(file_handle)
         self.assertEqual(len(S.tasks), G.num_nodes())
 
     def test_reft_random(self):
