@@ -1,99 +1,97 @@
 import collections
-import random
 from ortools.sat.python import cp_model
 
-import svgwrite
-from resch import scheduling
+import resch.scheduling.schedule as schedule
+import resch.scheduling.task as task
+import portion as po
 
-PEs_count = 3
-
-
-# TODO: remove this
-tasks_to_pes = [[0], [0], [1], [1], [2], [2]]
-
-P = range(PEs_count)
-P_or = 10
 
 # Takes a graph and machine models and gets the optimal schedule
-def build_schedule(m, g):
-    model = cp_model.CpModel()
+class OptimalScheduler:
+    def __init__(self, M, G):
+        self.M = M
+        self.G = G
 
-    horizon = sum(task.cost for task in g.tasks) + len(g.tasks) * P_or
+    def schedule(self):
+        self.model = cp_model.CpModel()
+        M = self.M
+        G = self.G
+        model = self.model
 
-    interval_type = collections.namedtuple('interval_type', 'task pe start end duration interval mapped location')
-    intervals = {}
+        InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task")
+                                                                     # ^ only for NewOptionalIntervalVar
 
-    all_tasks = {}
-    pes_to_tasks = {}
+        horizon = 5000
+        instances = {}
+        config_active = {}
 
-    for task in g.tasks:
-        task_id = task.index
-        duration = task.cost
-        for pe in m.PEs:
-            suffix = '[%i,%i]' % (task_id, pe.index)
-            start_var = model.NewIntVar(0, horizon, 'start' + suffix)
-            end_var = model.NewIntVar(0, horizon, 'end' + suffix)
-            duration_var = model.NewIntVar(duration, duration, 'duration' + suffix)
-            mapped_var = model.NewBoolVar('pes_to_tasks[%i][%i]' % (pe.index, task_id))
-            interval_var = model.NewOptionalIntervalVar(start_var, duration_var, end_var, mapped_var,  'interval' + suffix)
-            location_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues([l.index for l in pe.configuration.locations]), 'location[%i][%i]' % (pe.configuration.index, task_id))
+        tasks = [G.task(v) for v in G.sorted_topologically()]
+        for task in tasks:
+            for pe in M.PEs():
+                for l in M.locations():
+                    suffix = f"_{task.index}_{pe.index}_{l.index}"
+                    active = model.NewBoolVar(f"active{suffix}")
+                    t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
+                    cost = G.task_cost(task, pe)
+                    cost = model.NewIntVar(cost, cost, f"t_f{suffix}")
+                    t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
+                    interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, "active")
+                    instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task)
 
-            # Enforce P_ft
-            if pe.index not in tasks_to_pes[task_id]:
-                model.AddAbsEquality(0, mapped_var)
-            intervals[(task_id,pe.index)] = interval_type(start=start_var, end=end_var, duration=duration_var,mapped=mapped_var, pe=pe, task=task_id, interval=interval_var, location=location_var)
+        # Execute each task on exactly one placed PE
+        for task in tasks:
+            for l in M.locations():
+                model.AddExactlyOne(instances[(pe.index, l.index, task.index)].active for pe in M.PEs())
 
-    for pe in m.PEs:
-        pe_intervals = [intervals[(task.index, pe.index)] for task in g.tasks]
-        model.AddNoOverlap(interval.interval for interval in pe_intervals)
+        for task in tasks:
+            for dependency in G.task_dependencies(task):
+                for src_pe in M.PEs():
+                    for src_l in M.locations():
+                        for dst_pe in M.PEs():
+                            for dst_l in M.locations():
+                                model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+        # No overlap
+        for pe in M.PEs():
+            for l in M.locations():
+                model.AddNoOverlap(instances[(pe.index, l.index, task.index)].interval for task in tasks)
 
-    for task in g.tasks:
-        task_id = task.index
-        task_intervals = [intervals[(task_id, pe.index)] for pe in m.PEs]
-        # Have exactly one mapped interval/task
-        model.Add(sum(interval.mapped for interval in task_intervals) == 1)
+        obj_var = model.NewIntVar(0, horizon, 'makespan')
+        model.AddMaxEquality(obj_var, [i.t_f for k, i in instances.items()])
+        model.Minimize(obj_var)
 
-    for task in g.tasks:
-        task_id = task.index
-        task_dependencies = task.dependencies
-        for task_pe in m.PEs:
-            for dependency in task_dependencies:
-                for pe in m.PEs:
-                    model.Add(intervals[(task_id,task_pe.index)].start >= intervals[(dependency, pe.index)].end)
+        solver = cp_model.CpSolver()
+        schedule_builder = ScheduleBuilder(G, M, instances)
 
-    for a in intervals.values():
-        for b in intervals.values():
-            if a != b and a.pe.configuration != b.pe.configuration:
-                same_location = model.NewBoolVar(f'same_location{a.task}_{a.pe.index}_{b.task}_{b.pe.index}')
-                model.Add(a.location == b.location).OnlyEnforceIf(same_location)
-                model.Add(a.location != b.location).OnlyEnforceIf(same_location.Not())
-                either_or = model.NewBoolVar(f'inter_{a.task}_{b.task}')
-                model.Add(a.start >= b.end + P_or).OnlyEnforceIf(either_or).OnlyEnforceIf(same_location)
-                model.Add(b.start >= a.end + P_or).OnlyEnforceIf(either_or.Not()).OnlyEnforceIf(same_location)
+        solver.Solve(model, schedule_builder)
+        print('\nStatistics')
+        print('  - conflicts      : %i' % solver.NumConflicts())
+        print('  - branches       : %i' % solver.NumBranches())
+        print('  - wall time      : %f s' % solver.WallTime())
+        print('  - solutions found: %i' % schedule_builder.solution_count)
+        print('  - best solution  : %i' % schedule_builder.BestObjectiveBound())
+        print('  - cp len         : %i' % G.cp_len())
 
-    obj_var = model.NewIntVar(0, horizon, 'makespan')
-    model.AddMaxEquality(obj_var, [interval.end for _, interval in enumerate(intervals.values())])
-    model.Minimize(obj_var)
-
-
-    solver = cp_model.CpSolver()
-    status = solver.Solve(model)
-    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-
-        S = scheduling.Schedule()
-        for task in g.tasks:
-            for pe in m.PEs:
-                interval = intervals[(task.index, pe.index)]
-                if solver.Value(interval.mapped):
-                    t_s = solver.Value(interval.start)
-                    location = solver.Value(interval.location)
-                    task = scheduling.ScheduledTask(g.tasks[task.index], t_s, pe, location)
-                    S.add_task(task)
-
-        return S
-    else:
-        return None
-                
+        print(schedule_builder.Ss[-1])
 
 
+class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
+    def __init__(self, G, M, instances):
+        cp_model.CpSolverSolutionCallback.__init__(self)
+        self.S = schedule.Schedule()
+        self.solution_count = 0
+        self.G = G
+        self.M = M
+        self.instances = instances
+        self.Ss = []
 
+    def on_solution_callback(self):
+        self.solution_count += 1
+
+        S = schedule.Schedule()
+        for k, i in self.instances.items():
+            if self.Value(i.active):
+                interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
+                instance = schedule.Instance(i.task, i.pe, i.location, interval)
+                scheduled_task = task.ScheduledTask(i.task, instance)
+                S.add_task(scheduled_task)
+        self.Ss.append(S)

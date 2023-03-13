@@ -122,8 +122,14 @@ class TaskGraph:
         ttype = self.t[node_id]
         return task.Task(node_id, label, cost, ttype)
 
+    def tasks(self):
+        return [self.task(v) for v in self.g.get_vertices()]
+
     def dependencies(self, task):
         return self.g.vertex(task.index).in_neighbors()
+
+    def task_dependencies(self, task):
+        return [self.task(int(v)) for v in self.g.vertex(task.index).in_neighbors()]
 
     def inclusive_cost_map(self):
         """ Returns an edge property map with computing cost included
@@ -143,6 +149,10 @@ class TaskGraph:
             g.ep["inclusive_cost"] = weight_map
 
         return g.ep["inclusive_cost"]
+
+    def task_cost(self, task, pe):
+        return self.g.vp.cost[task.index][pe.index]
+
 
     def edge(self, src_task, dst_task):
         return self.g.edge(src_task.index, dst_task.index)
