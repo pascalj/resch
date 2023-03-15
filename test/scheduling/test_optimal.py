@@ -11,8 +11,8 @@ from test.fixtures import fixtures
 class TestOptimal(unittest.TestCase):
     def test_optimal(self):
         M = fixtures.single_config_machine(num_PEs = 2, num_locs = 1)
-        G = fixtures.sample_graph()
+        G = graph.TaskGraph(generator.random(10))
         S = optimal.OptimalScheduler(M, G).schedule()
 
-        # self.assertEqual(len(S.tasks), G.num_nodes())
+        self.assertEqual(len(S.tasks), G.num_nodes())
 

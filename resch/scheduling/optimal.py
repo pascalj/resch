@@ -12,14 +12,14 @@ class OptimalScheduler:
         self.M = M
         self.G = G
 
-    def schedule(self):
+    def schedule(self, debug = False):
         self.model = cp_model.CpModel()
         M = self.M
         G = self.G
         model = self.model
 
         InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task")
-                                                                     # ^ only for NewOptionalIntervalVar
+                                                            # ^^^^ only for NewOptionalIntervalVar
 
         horizon = 5000
         instances = {}
@@ -63,15 +63,18 @@ class OptimalScheduler:
         schedule_builder = ScheduleBuilder(G, M, instances)
 
         solver.Solve(model, schedule_builder)
-        print('\nStatistics')
-        print('  - conflicts      : %i' % solver.NumConflicts())
-        print('  - branches       : %i' % solver.NumBranches())
-        print('  - wall time      : %f s' % solver.WallTime())
-        print('  - solutions found: %i' % schedule_builder.solution_count)
-        print('  - best solution  : %i' % schedule_builder.BestObjectiveBound())
-        print('  - cp len         : %i' % G.cp_len())
+        if debug:
+            print('\nStatistics')
+            print('  - conflicts      : %i' % solver.NumConflicts())
+            print('  - branches       : %i' % solver.NumBranches())
+            print('  - wall time      : %f s' % solver.WallTime())
+            print('  - solutions found: %i' % schedule_builder.solution_count)
+            print('  - best solution  : %i' % schedule_builder.BestObjectiveBound())
+            print('  - cp len         : %i' % G.cp_len())
 
-        print(schedule_builder.min_schedule())
+            print(schedule_builder.min_schedule())
+
+        return schedule_builder.min_schedule()
 
 
 class ScheduleBuilder(cp_model.CpSolverSolutionCallback):

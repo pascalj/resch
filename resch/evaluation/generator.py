@@ -173,15 +173,17 @@ def add_dummy_tasks(g):
     """
     entry_task = g.add_vertex()
     exit_task = g.add_vertex()
-    g.vp.cost[entry_task] = [1] * 9
-    g.vp.cost[exit_task] = [1] * 9
+    if "cost" in g.vp:
+        g.vp.cost[entry_task] = [1] * 9
+        g.vp.cost[exit_task] = [1] * 9
     for v in g.vertices():
         if v != entry_task and v != exit_task:
             entry_edge = g.add_edge(entry_task, v)
             exit_edge = g.add_edge(v, exit_task)
 
-            g.ep.comm[entry_edge] = 1
-            g.ep.comm[exit_edge] = 1
+            if "comm" in g.ep:
+                g.ep.comm[entry_edge] = 1
+                g.ep.comm[exit_edge] = 1
 
 def add_cost(g, cost_func = None, comcost_func = None, num_PEs = 9):
     """
