@@ -54,8 +54,8 @@ def layer_by_layer(n, layers, p):
                 if uniform(0, 1) < p:
                     g.add_edge(v_p, v_n)
 
-    add_dummy_tasks(g)
     add_cost(g)
+    add_dummy_tasks(g)
     return g
 
 def random(n, sampler = None):
@@ -77,8 +77,8 @@ def random(n, sampler = None):
 
     g.set_edge_filter(tree)
 
-    add_dummy_tasks(g)
     add_cost(g)
+    add_dummy_tasks(g)
 
     return g
 
@@ -173,10 +173,15 @@ def add_dummy_tasks(g):
     """
     entry_task = g.add_vertex()
     exit_task = g.add_vertex()
+    g.vp.cost[entry_task] = [1] * 9
+    g.vp.cost[exit_task] = [1] * 9
     for v in g.vertices():
         if v != entry_task and v != exit_task:
-            g.add_edge(entry_task, v)
-            g.add_edge(v, exit_task)
+            entry_edge = g.add_edge(entry_task, v)
+            exit_edge = g.add_edge(v, exit_task)
+
+            g.ep.comm[entry_edge] = 1
+            g.ep.comm[exit_edge] = 1
 
 def add_cost(g, cost_func = None, comcost_func = None, num_PEs = 9):
     """

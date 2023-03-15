@@ -71,7 +71,7 @@ class OptimalScheduler:
         print('  - best solution  : %i' % schedule_builder.BestObjectiveBound())
         print('  - cp len         : %i' % G.cp_len())
 
-        print(schedule_builder.Ss[-1])
+        print(schedule_builder.min_schedule())
 
 
 class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
@@ -95,3 +95,6 @@ class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
                 scheduled_task = task.ScheduledTask(i.task, instance)
                 S.add_task(scheduled_task)
         self.Ss.append(S)
+
+    def min_schedule(self):
+        return min(self.Ss, key = lambda s: s.length())

@@ -36,6 +36,9 @@ class Schedule:
         assert(p.index is not None)
         assert(loc.index is not None)
 
+        if task.cost[p.index] == 0:
+            return po.singleton(earliest.lower)
+
         available = earliest
 
         # Remove other tasks on the same PE
@@ -74,8 +77,9 @@ class Schedule:
         return [i for i in self.instances if i.task.index in int_tasks]
 
     def to_csv(self, file_handle):
-        rows = [f"{i.config.index},{i.pe.index},{i.location.index},{i.interval.lower},{i.interval.upper},{i.task.index}\n"
-            for i in self.instances]
+        rows = ["config,pe,location,t_s,t_f,task\n"]
+        for i in self.instances:
+            rows.append(f"{i.config.index},{i.pe.index},{i.location.index},{i.interval.lower},{i.interval.upper},{i.task.index}\n")
             
         file_handle.writelines(rows)
 
@@ -175,6 +179,16 @@ class EdgeSchedule:
         link_interval = po.closedopen(interval.upper - link_cost, interval.upper)
         assert(not self.A_l[link].domain().overlaps(interval))
         self.A_l[link][interval] = (src_instance.task.index, dst_task.index)
+
+    def to_csv(self, file_handle):
+        rows = ["t_s,t_f,link,from,to\n"]
+        links = sorted(self.A_l.keys())
+        for link in links:
+            for interval, edge in self.A_l[link].items():
+                link_id = f"{link.source()}-{link.target()}"
+                rows.append(f"{interval.lower},{interval.upper},{link_id},{edge[0]},{edge[1]}\n")
+        file_handle.writelines(rows)
+
 
     def __str__(self):
         ret = ""

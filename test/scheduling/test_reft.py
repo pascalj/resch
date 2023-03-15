@@ -14,8 +14,6 @@ class TestREFT(unittest.TestCase):
         G = fixtures.sample_graph()
         S = reft.REFT(M, G).schedule()
 
-        with open("test_reft.csv", "w"):
-            S.to_csv(file_handle)
         self.assertEqual(len(S.tasks), G.num_nodes())
 
     def test_reft_random(self):
@@ -33,8 +31,14 @@ class TestREFT(unittest.TestCase):
         self.assertEqual(len(S.tasks), G.num_nodes())
 
     def test_reft_random_edge(self):
-        M = fixtures.single_config_machine(num_PEs = 2, num_locs = 2)
+        M = fixtures.single_config_machine(num_PEs = 3, num_locs = 2)
         G = graph.TaskGraph(generator.random(25))
-        S = reft.REFT(M, G, schedule.EdgeSchedule).schedule()
+        r = reft.REFT(M, G, schedule.EdgeSchedule)
+        S = r.schedule()
+
+        with open("test_reft.csv", "w") as f:
+            S.to_csv(f)
+        with open("test_reft_edges.csv", "w") as f:
+            r.E.to_csv(f)
 
         self.assertEqual(len(S.tasks), G.num_nodes())
