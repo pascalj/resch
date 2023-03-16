@@ -68,6 +68,19 @@ class Properties:
         self.P_c = c_properties
         self.P_l = l_properties
 
+    def __get__item(self, key):
+        if type(key) == PE:
+            assert(key in self.P_p)
+            return self.P_p[key]
+        if type(key) == Configuration:
+            assert(key in self.P_c)
+            return self.P_c[key]
+        if type(key) == Location:
+            assert(key in self.P_l)
+            return self.P_l[key]
+        assert(False)
+
+
 class Topology:
     def __init__(self, g = None, PE_map = {}):
         self.g = g

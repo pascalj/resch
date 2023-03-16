@@ -105,9 +105,6 @@ class GA:
         model.plot_fitness()
         return model.best_solutions[-1]
 
-def usage():
-    print("usage: python3 -m resch.ga <graph>.xml [solution.svg]")
-
 def main():
     import sys
 
