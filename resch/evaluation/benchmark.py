@@ -21,6 +21,6 @@ def machine_benchmark(M, Gs, algo):
         speedup(S, G),
         slr(S, G),
         slack(S, G),
-    ] for (S, G) in SGs])
+    ] for ((S, E), G) in SGs])
 
     return metrics

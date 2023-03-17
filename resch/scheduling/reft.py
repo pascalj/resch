@@ -53,7 +53,7 @@ class REFT:
             # for instance in self.S.instances_for_tasks(self.G.dependencies(task)):
             #     self.E.add_task(instance, scheduled_task)
 
-        return self.S
+        return (self.S, self.E)
 
     def data_ready_time(self, task, dst_PE, dst_loc):
         dependencies = [int(i) for i in self.G.dependencies(task)]

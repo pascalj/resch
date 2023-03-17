@@ -114,6 +114,9 @@ class NoEdgeSchedule:
     def allocate_path(self, instance, *arg):
         return po.singleton(instance.interval.upper)
 
+    def add_interval(self, *arg):
+        pass
+
     def __str__(self):
         return "No edge schedule"
 
@@ -179,6 +182,10 @@ class EdgeSchedule:
         link_interval = po.closedopen(interval.upper - link_cost, interval.upper)
         assert(not self.A_l[link].domain().overlaps(interval))
         self.A_l[link][interval] = (src_instance.task.index, dst_task.index)
+
+    def add_interval(self, link, interval, src_task_index, dst_task_index):
+        self.A_l[link][interval] = (src_task_index, dst_task_index)
+
 
     def to_csv(self, file_handle):
         rows = ["t_s,t_f,link,from,to\n"]

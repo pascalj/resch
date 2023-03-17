@@ -8,9 +8,10 @@ import portion as po
 
 # Takes a graph and machine models and gets the optimal schedule
 class OptimalScheduler:
-    def __init__(self, M, G):
+    def __init__(self, M, G, E_cls = schedule.NoEdgeSchedule):
         self.M = M
         self.G = G
+        self.E_cls = E_cls
 
     def schedule(self, debug = False):
         self.model = cp_model.CpModel()
@@ -20,10 +21,12 @@ class OptimalScheduler:
 
         InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task")
                                                             # ^^^^ only for NewOptionalIntervalVar
+        LinkInstanceVar = collections.namedtuple("LinkInstance", "t_s cost t_f interval active")
 
         horizon = 5000
         instances = {}
         config_active = {}
+        edge_instances = {}
 
         tasks = [G.task(v) for v in G.sorted_topologically()]
         for task in tasks:
@@ -33,9 +36,9 @@ class OptimalScheduler:
                     active = model.NewBoolVar(f"active{suffix}")
                     t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
                     cost = G.task_cost(task, pe)
-                    cost = model.NewIntVar(cost, cost, f"t_f{suffix}")
+                    cost = model.NewIntVar(cost, cost, f"cost{suffix}")
                     t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
-                    interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, "active")
+                    interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active{suffix}")
                     instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task)
 
         # Execute each task on exactly one placed PE
@@ -49,18 +52,42 @@ class OptimalScheduler:
                     for src_l in M.locations():
                         for dst_pe in M.PEs():
                             for dst_l in M.locations():
-                                model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+                                if self.E_cls == schedule.NoEdgeSchedule:
+                                    model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+                                else:
+                                    path = self.M.topology.pe_path((src_pe.index, src_l.index), (dst_pe.index, dst_l.index))
+                                    for link in path:
+                                        link_id = link
+                                        suffix = f"_link_{task.index}_{dependency.index}_{link_id}"
+
+                                        t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
+                                        cost_val = G.edge_cost(dependency, task)
+                                        cost = model.NewIntVar(cost_val, cost_val, f"cost{suffix}")
+                                        t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
+                                        active = instances[(dst_pe.index, dst_l.index, task.index)].active
+                                        interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active#{suffix}")
+                                        instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=active)
+                                        model.Add(t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+                                        model.Add(t_s > instances[(src_pe.index, src_l.index, dependency.index)].t_f)
+                                        edge_instances[(task.index, dependency.index, link_id)] = instance
+                                        
+
         # No overlap
         for pe in M.PEs():
             for l in M.locations():
                 model.AddNoOverlap(instances[(pe.index, l.index, task.index)].interval for task in tasks)
+
+        for link in self.M.topology.g.edges():
+            link_instances = [edge_instances[k] for k in edge_instances.keys() if k[2] == (link.source(), link.target())]
+            model.AddNoOverlap(i.interval for i in link_instances)
+
 
         obj_var = model.NewIntVar(0, horizon, 'makespan')
         model.AddMaxEquality(obj_var, [i.t_f for k, i in instances.items()])
         model.Minimize(obj_var)
 
         solver = cp_model.CpSolver()
-        schedule_builder = ScheduleBuilder(G, M, instances)
+        schedule_builder = ScheduleBuilder(G, M, instances, edge_instances, self.E_cls)
 
         solver.Solve(model, schedule_builder)
         if debug:
@@ -78,26 +105,37 @@ class OptimalScheduler:
 
 
 class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
-    def __init__(self, G, M, instances):
+    def __init__(self, G, M, instances, edge_instances, E_cls):
         cp_model.CpSolverSolutionCallback.__init__(self)
         self.S = schedule.Schedule()
         self.solution_count = 0
         self.G = G
         self.M = M
         self.instances = instances
+        self.edge_instances = edge_instances
         self.Ss = []
+        self.Es = []
+        self.E_cls = E_cls
 
     def on_solution_callback(self):
         self.solution_count += 1
 
         S = schedule.Schedule()
+        E = self.E_cls(self.G, self.M)
         for k, i in self.instances.items():
             if self.Value(i.active):
                 interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
                 instance = schedule.Instance(i.task, i.pe, i.location, interval)
                 scheduled_task = task.ScheduledTask(i.task, instance)
                 S.add_task(scheduled_task)
+        for k, i in self.edge_instances.items():
+            if self.Value(i.active):
+                (src_task_index, dst_task_index, link) = k
+                interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
+                E.add_interval(link, interval, src_task_index, dst_task_index)
         self.Ss.append(S)
+        self.Es.append(E)
 
     def min_schedule(self):
-        return min(self.Ss, key = lambda s: s.length())
+        minpos = self.Ss.index(min(self.Ss, key = lambda s: s.length()))
+        return (self.Ss[minpos], self.Es[minpos])

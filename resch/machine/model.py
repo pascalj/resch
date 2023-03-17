@@ -169,8 +169,8 @@ class Topology:
         Get the shortest path (edges) from a node to another
 
         Args:
-            from (): Vertex
-            to (): Vertex
+            from (): (pe_d, loc_id)
+            to (): (pe_id, loc_id)
 
         Returns: [Edge]
             

@@ -153,12 +153,13 @@ class TaskGraph:
     def task_cost(self, task, pe):
         return self.g.vp.cost[task.index][pe.index]
 
-
     def edge(self, src_task, dst_task):
         return self.g.edge(src_task.index, dst_task.index)
 
     def edge_cost(self, src_task, dst_task):
-        return self.g.ep.comm[self.g.edge(src_task.index, dst_task.index)]
+        edge = self.g.edge(src_task.index, dst_task.index)
+        assert(edge is not None)
+        return self.g.ep.comm[edge]
 
     def set_uniform_cost(self, cost):
         if "cost" not in self.g.vp:
