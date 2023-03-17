@@ -56,14 +56,13 @@ class OptimalScheduler:
                                     model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
                                 else:
                                     path = self.M.topology.pe_path((src_pe.index, src_l.index), (dst_pe.index, dst_l.index))
+                                    t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                                     for link in path:
                                         link_id = link
                                         suffix = f"_link_{task.index}_{dependency.index}_{link_id}"
-
                                         t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
-                                        cost_val = G.edge_cost(dependency, task)
+                                        cost_val = int(G.edge_cost(dependency, task) / self.M.topology.relative_capacity(link))
                                         cost = model.NewIntVar(cost_val, cost_val, f"cost{suffix}")
-                                        t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                                         active = instances[(dst_pe.index, dst_l.index, task.index)].active
                                         interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active#{suffix}")
                                         instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=active)

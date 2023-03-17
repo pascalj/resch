@@ -15,13 +15,24 @@ class TestOptimal(unittest.TestCase):
         G = graph.TaskGraph(generator.random(10))
         (S, E) = optimal.OptimalScheduler(M, G).schedule()
 
+
         self.assertEqual(len(S.tasks), G.num_nodes())
 
-    def test_optimal(self):
+    def test_optimal_edge(self):
         M = fixtures.single_config_machine(num_PEs = 2, num_locs = 1)
         M.topology = model.Topology.default_from_accelerator(M.accelerator)
         G = graph.TaskGraph(generator.random(10))
         (S, E) = optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
+
+        M.topology.show()
+
+        with open("test_optimal.csv", "w") as f:
+            S.to_csv(f)
+
+        with open("test_optimal_edge.csv", "w") as f:
+            E.to_csv(f)
+
+            # Todo: find out why there are paths with 2 links
 
         self.assertEqual(len(S.tasks), G.num_nodes())
 

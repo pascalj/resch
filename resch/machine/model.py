@@ -202,7 +202,7 @@ class Topology:
         return self.g.ep.capacity[link]
 
     def show(self):
-        graphviz_draw(self.g, layout="dot")
+        graphviz_draw(self.g, layout="dot", vprops={"label": self.g.vp.label})
 
 
 class Machine:
