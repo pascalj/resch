@@ -24,8 +24,6 @@ class TestOptimal(unittest.TestCase):
         G = graph.TaskGraph(generator.random(10))
         (S, E) = optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
 
-        M.topology.show()
-
         with open("test_optimal.csv", "w") as f:
             S.to_csv(f)
 
