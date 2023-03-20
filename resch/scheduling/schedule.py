@@ -67,7 +67,7 @@ class Schedule:
 
         # Ensure sure that the PE is not executing any other task
         if self.A_p[(p_id, l_id)].domain().overlaps(instance.interval):
-            assert(False)
+            assert(False, f"{instance.interval}")
         self.A_p[(p_id, l_id)][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id

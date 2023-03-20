@@ -130,7 +130,12 @@ class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
         E = self.E_cls(self.G, self.M)
         for k, i in self.instances.items():
             if self.Value(i.active):
-                interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
+                t_s = self.Value(i.t_s)
+                t_f = self.Value(i.t_f)
+                if t_s == t_f:
+                    interval = po.singleton(t_s)
+                else:
+                    interval = po.closedopen(t_s, t_f)
                 instance = schedule.Instance(i.task, i.pe, i.location, interval)
                 scheduled_task = task.ScheduledTask(i.task, instance)
                 S.add_task(scheduled_task)

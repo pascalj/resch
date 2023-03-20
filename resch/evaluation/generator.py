@@ -174,8 +174,8 @@ def add_dummy_tasks(g):
     entry_task = g.add_vertex()
     exit_task = g.add_vertex()
     if "cost" in g.vp:
-        g.vp.cost[entry_task] = [1] * 9
-        g.vp.cost[exit_task] = [1] * 9
+        g.vp.cost[entry_task] = [0] * 9
+        g.vp.cost[exit_task] = [0] * 9
     for v in g.vertices():
         if v != entry_task and v != exit_task:
             entry_edge = g.add_edge(entry_task, v)
