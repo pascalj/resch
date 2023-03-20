@@ -107,7 +107,7 @@ def lu(num_blocks, comm_cost = None, comp_cost = None):
     tasks = {}
 
     if comp_cost is None:
-        comp_cost = lambda it, i, j: [100]
+        comp_cost = lambda it, i, j: [100] * 9
 
     def gen_task(it, i, j):
         v = g.add_vertex()

@@ -52,25 +52,31 @@ class OptimalScheduler:
                     for src_l in M.locations():
                         for dst_pe in M.PEs():
                             for dst_l in M.locations():
-                                if self.E_cls == schedule.NoEdgeSchedule:
-                                    model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
-                                else:
+                                model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+                                if self.E_cls == schedule.EdgeSchedule:
                                     path = self.M.topology.pe_path((src_pe.index, src_l.index), (dst_pe.index, dst_l.index))
-                                    t_f = model.NewIntVar(0, horizon, f"t_f_l_{suffix}")
-                                    active = instances[(dst_pe.index, dst_l.index, task.index)].active
+                                    src_active = instances[(src_pe.index, src_l.index, dependency.index)].active
+                                    dst_active = instances[(dst_pe.index, dst_l.index, task.index)].active
+                                    edge_active = model.NewBoolVar("active")
+                                    model.Add(edge_active == True).OnlyEnforceIf(src_active).OnlyEnforceIf(dst_active)
+                                    model.Add(edge_active == False).OnlyEnforceIf(src_active.Not())
+                                    model.Add(edge_active == False).OnlyEnforceIf(dst_active.Not())
+                                    edge_cost = G.edge_cost(dependency, task) 
+                                    t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                                     for link in path:
                                         link_id = link
-                                        suffix = f"_link_{task.index}_{dependency.index}_{link_id}"
+                                        suffix = f"_{(src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id)}"
                                         t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
-                                        cost_val = int(G.edge_cost(dependency, task) / self.M.topology.relative_capacity(link))
+                                        cost_val = int(edge_cost / self.M.topology.relative_capacity(link))
                                         cost = model.NewIntVar(cost_val, cost_val, f"cost{suffix}")
-                                        interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"interval{suffix}")
-                                        instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=active)
-                                        model.Add(t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
-                                        model.Add(t_s > instances[(src_pe.index, src_l.index, dependency.index)].t_f)
-                                        print((src_pe.index, dst_pe.index), (dependency.index, task.index), link_id)
-                                        assert((src_pe.index, dst_pe.index, dependency.index, task.index, link_id) not in edge_instances)
-                                        edge_instances[(src_pe.index, dst_pe.index, dependency.index, task.index, link_id)] = instance
+                                        model.Add(t_s > instances[(src_pe.index, src_l.index, dependency.index)].t_f).OnlyEnforceIf(edge_active)
+                                        model.Add(t_f > instances[(src_pe.index, src_l.index, dependency.index)].t_f).OnlyEnforceIf(edge_active)
+                                        model.Add(t_s < instances[(dst_pe.index, dst_l.index, task.index)].t_s).OnlyEnforceIf(edge_active)
+                                        model.Add(t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s).OnlyEnforceIf(edge_active)
+                                        interval = model.NewOptionalIntervalVar(t_s, cost, t_f, edge_active, f"interval{suffix}")
+                                        instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=edge_active)
+                                        assert((src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id) not in edge_instances)
+                                        edge_instances[(src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id)] = instance
                                         
 
         # No overlap
@@ -79,8 +85,7 @@ class OptimalScheduler:
                 model.AddNoOverlap(instances[(pe.index, l.index, task.index)].interval for task in tasks)
 
         for link in self.M.topology.g.edges():
-            link_instances = [edge_instances[k] for k in edge_instances.keys() if k[4] == link]
-            print(len(link_instances))
+            link_instances = [edge_instances[k] for k in edge_instances.keys() if k[6] == link]
             model.AddNoOverlap(i.interval for i in link_instances)
 
 
@@ -132,7 +137,9 @@ class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
                 S.add_task(scheduled_task)
         for k, i in self.edge_instances.items():
             if self.Value(i.active):
-                (src_l, dst_l, src_task_index, dst_task_index, link) = k
+                (src_pe, src_l, dst_pe, dst_l, src_task_index, dst_task_index, link) = k
+                assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_s))
+                assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_f))
                 interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
                 E.add_interval(link, interval, src_task_index, dst_task_index)
         self.Ss.append(S)
