@@ -43,8 +43,7 @@ class OptimalScheduler:
 
         # Execute each task on exactly one placed PE
         for task in tasks:
-            for l in M.locations():
-                model.AddExactlyOne(instances[(pe.index, l.index, task.index)].active for pe in M.PEs())
+            model.AddExactlyOne(instances[(pe.index, l.index, task.index)].active for pe in M.PEs() for l in M.locations())
 
         for task in tasks:
             for dependency in G.task_dependencies(task):
