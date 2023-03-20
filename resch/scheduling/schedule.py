@@ -132,7 +132,12 @@ class EdgeSchedule:
         if is_local:
             return t_f
 
+
         cost = self.G.edge_cost(src_instance.task, dst_task)
+
+        if cost == 0:
+            return t_f
+
         path = self.topo.pe_path(src_instance.placed_pe(), (dst_PE.index, dst_loc.index))
 
         available_interval = self.available_path_interval(path, cost, t_f)
@@ -170,6 +175,9 @@ class EdgeSchedule:
         cost = self.G.edge_cost(src_instance.task, dst_task)
         lower_bound = src_instance.interval.upper
 
+        if cost == 0:
+            return po.singleton(src_instance.interval.upper)
+
         interval = self.available_path_interval(path, cost, lower_bound)
 
         for link in path:
@@ -178,6 +186,8 @@ class EdgeSchedule:
         return interval
 
     def allocate_edge(self, link, src_instance, dst_task, cost, interval):
+        if cost == 0:
+            return
         link_cost = cost / self.topo.relative_capacity(link)
         link_interval = po.closedopen(interval.upper - link_cost, interval.upper)
         assert(not self.A_l[link].domain().overlaps(interval))
