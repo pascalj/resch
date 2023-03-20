@@ -19,7 +19,7 @@ class TestOptimal(unittest.TestCase):
         self.assertEqual(len(S.tasks), G.num_nodes())
 
     def test_optimal_edge(self):
-        M = fixtures.single_config_machine(num_PEs = 2, num_locs = 1)
+        M = fixtures.single_config_machine(num_PEs = 2, num_locs = 2)
         M.topology = model.Topology.default_from_accelerator(M.accelerator)
         G = graph.TaskGraph(generator.random(10))
         (S, E) = optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()

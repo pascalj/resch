@@ -182,8 +182,8 @@ def add_dummy_tasks(g):
             exit_edge = g.add_edge(v, exit_task)
 
             if "comm" in g.ep:
-                g.ep.comm[entry_edge] = 1
-                g.ep.comm[exit_edge] = 1
+                g.ep.comm[entry_edge] = 0
+                g.ep.comm[exit_edge] = 0
 
 def add_cost(g, cost_func = None, comcost_func = None, num_PEs = 9):
     """

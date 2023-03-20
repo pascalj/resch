@@ -140,7 +140,8 @@ class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
                 assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_s))
                 assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_f))
                 interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
-                E.add_interval(link, interval, src_task_index, dst_task_index)
+                if not interval.empty:
+                    E.add_interval(link, interval, src_task_index, dst_task_index)
         self.Ss.append(S)
         self.Es.append(E)
 
