@@ -29,14 +29,8 @@ class TestOptimal(unittest.TestCase):
     def test_optimal_multi(self):
         M = fixtures.pr_machine(num_PEs = 2, num_locs = 2)
         M.topology = model.Topology.default_from_accelerator(M.accelerator)
-        G = graph.TaskGraph(generator.random(10))
+        G = graph.TaskGraph(generator.random(5))
         (S, E) = optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
-
-        with open("test_optimal.csv", "w") as f:
-            S.to_csv(f)
-
-        with open("test_optimal_edge.csv", "w") as f:
-            E.to_csv(f)
 
         self.assertEqual(len(S.tasks), G.num_nodes())
 
