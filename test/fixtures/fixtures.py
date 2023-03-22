@@ -21,6 +21,14 @@ def single_config_machine(num_PEs = 1, num_locs = 1):
     topo = m.Topology.default_from_accelerator(acc)
     return m.Machine(acc, topo, m.Properties())
 
+def pr_machine(num_PEs = 1, num_locs = 1):
+    locations = [m.Location(i) for i in range(num_locs)]
+    configs = [m.Configuration(i, locations) for i in range(num_PEs)]
+    PEs = [m.PE(i, configs[i], {}) for i in range(num_PEs)]
+    acc = m.Accelerator(PEs)
+    topo = m.Topology.default_from_accelerator(acc)
+    return m.Machine(acc, topo, m.Properties())
+
 def instance(task, pe, location, interval):
     return s.Instance(task, pe, location, interval)
 

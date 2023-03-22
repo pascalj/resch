@@ -1,6 +1,8 @@
 import collections
 from ortools.sat.python import cp_model
 
+from itertools import combinations
+
 import resch.scheduling.schedule as schedule
 import resch.scheduling.task as task
 import portion as po
@@ -44,6 +46,16 @@ class OptimalScheduler:
         # Execute each task on exactly one placed PE
         for task in tasks:
             model.AddExactlyOne(instances[(pe.index, l.index, task.index)].active for pe in M.PEs() for l in M.locations())
+
+        # Ensure non-overlap of different configurations on a location
+        for (lhs_key, rhs_key) in list(combinations(instances.keys(), 2)):
+            (l_pe, l_l, l_t) = lhs_key
+            (r_pe, r_l, r_t) = rhs_key
+            lhs = instances[lhs_key]
+            rhs = instances[rhs_key]
+            if r_l == l_l and lhs.pe.configuration != rhs.pe.configuration:
+                model.AddNoOverlap([lhs.interval, rhs.interval])
+
 
         for task in tasks:
             for dependency in G.task_dependencies(task):

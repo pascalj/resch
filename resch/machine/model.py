@@ -29,6 +29,14 @@ class Configuration(IndexEqualityMixin):
     def add_pe(self, pe):
         self.PEs.add(pe)
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self.index == other.index
+
+    def __hash__(self):
+        return hash((self.index))
+
 class PE:
     def __init__(self, index, configuration, properties = {}):
         self.index = index
@@ -179,8 +187,8 @@ class Topology:
         return edges
 
     def pe_path(self, src_placed, dst_placed):
-        assert(src_placed in self.PE_map)
-        assert(dst_placed in self.PE_map);
+        assert src_placed in self.PE_map, src_placed
+        assert dst_placed in self.PE_map, dst_placed
 
         src_node = self.PE_map[src_placed] 
         dst_node = self.PE_map[dst_placed] 
@@ -219,3 +227,6 @@ class Machine:
 
     def locations(self):
         return self.accelerator.locations()
+
+    def configurations(self):
+        return self.accelerator.configurations()
