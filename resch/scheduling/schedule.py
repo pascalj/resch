@@ -96,7 +96,7 @@ class Schedule:
             ret += f"PE {pe}\n\t{interval}\n"
 
         return ret
-            
+
 class NoEdgeSchedule:
     def __init__(self, G, M):
         self.G = G
