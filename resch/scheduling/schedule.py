@@ -80,7 +80,7 @@ class Schedule:
         rows = ["config,pe,location,t_s,t_f,task\n"]
         for i in self.instances:
             rows.append(f"{i.config.index},{i.pe.index},{i.location.index},{i.interval.lower},{i.interval.upper},{i.task.index}\n")
-            
+
         file_handle.writelines(rows)
 
     def __str__(self):

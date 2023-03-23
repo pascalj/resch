@@ -21,7 +21,7 @@ class OptimalScheduler:
         G = self.G
         model = self.model
 
-        InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task ttype")
+        InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task ttype intcost")
                                                             # ^^^^ only for NewOptionalIntervalVar
         LinkInstanceVar = collections.namedtuple("LinkInstance", "t_s cost t_f interval active")
 
@@ -37,8 +37,8 @@ class OptimalScheduler:
                     suffix = f"_{task.index}_{pe.index}_{l.index}"
                     active = model.NewBoolVar(f"active{suffix}")
                     t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
-                    cost = G.task_cost(task, pe)
-                    cost = model.NewIntVar(cost, cost, f"cost{suffix}")
+                    intcost = G.task_cost(task, pe)
+                    cost = model.NewIntVar(intcost, intcost, f"cost{suffix}")
                     t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                     interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active{suffix}")
 
@@ -46,7 +46,7 @@ class OptimalScheduler:
                     if task.type is not None and task.type != pe.type:
                         model.Add(active == False)
 
-                    instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task, ttype=task.type)
+                    instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task, ttype=task.type, intcost=intcost)
 
         # Execute each task on exactly one placed PE
         for task in tasks:
@@ -59,17 +59,18 @@ class OptimalScheduler:
             lhs = instances[lhs_key]
             rhs = instances[rhs_key]
             if r_l == l_l and lhs.pe.configuration != rhs.pe.configuration:
-                model.AddNoOverlap([lhs.interval, rhs.interval])
-                
-                # Ensure P_L^R(l_l)
-                if "r" in M.properties[M.location(l_l)]:
-                    overhead = M.properties[M.location(l_l)]["r"]
-                    lhs_before = model.NewBoolVar(f"lhs_before_{lhs_key}_{rhs_key}")
-                    model.Add(lhs.t_f < rhs.t_f).OnlyEnforceIf(lhs_before)
-                    model.Add(lhs.t_f >= rhs.t_f).OnlyEnforceIf(lhs_before.Not())
+                if lhs.intcost > 0 and rhs.intcost > 0:
+                    model.AddNoOverlap([lhs.interval, rhs.interval])
 
-                    model.Add(lhs.t_f + overhead < rhs.t_s).OnlyEnforceIf(lhs_before)
-                    model.Add(rhs.t_f + overhead < lhs.t_s).OnlyEnforceIf(lhs_before.Not())
+                    # Ensure P_L^R(l_l)
+                    if "r" in M.properties[M.location(l_l)]:
+                        overhead = M.properties[M.location(l_l)]["r"]
+                        lhs_before = model.NewBoolVar(f"lhs_before_{lhs_key}_{rhs_key}")
+                        model.Add(lhs.t_f < rhs.t_f).OnlyEnforceIf(lhs_before)
+                        model.Add(lhs.t_f >= rhs.t_f).OnlyEnforceIf(lhs_before.Not())
+
+                        model.Add(lhs.t_f + overhead < rhs.t_s).OnlyEnforceIf(lhs_before)
+                        model.Add(rhs.t_f + overhead < lhs.t_s).OnlyEnforceIf(lhs_before.Not())
 
 
 
@@ -80,7 +81,7 @@ class OptimalScheduler:
                     for src_l in M.locations():
                         for dst_pe in M.PEs():
                             for dst_l in M.locations():
-                                model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s)
+                                model.Add(instances[(src_pe.index, src_l.index, dependency.index)].t_f <= instances[(dst_pe.index, dst_l.index, task.index)].t_s)
                                 if self.E_cls == schedule.EdgeSchedule:
                                     path = self.M.topology.pe_path((src_pe.index, src_l.index), (dst_pe.index, dst_l.index))
                                     src_active = instances[(src_pe.index, src_l.index, dependency.index)].active
@@ -89,7 +90,7 @@ class OptimalScheduler:
                                     model.Add(edge_active == True).OnlyEnforceIf(src_active).OnlyEnforceIf(dst_active)
                                     model.Add(edge_active == False).OnlyEnforceIf(src_active.Not())
                                     model.Add(edge_active == False).OnlyEnforceIf(dst_active.Not())
-                                    edge_cost = G.edge_cost(dependency, task) 
+                                    edge_cost = G.edge_cost(dependency, task)
                                     t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                                     for link in path:
                                         link_id = link
@@ -105,12 +106,11 @@ class OptimalScheduler:
                                         instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=edge_active)
                                         assert((src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id) not in edge_instances)
                                         edge_instances[(src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id)] = instance
-                                        
 
         # No overlap
         for pe in M.PEs():
             for l in M.locations():
-                model.AddNoOverlap(instances[(pe.index, l.index, task.index)].interval for task in tasks)
+                model.AddNoOverlap(instances[(pe.index, l.index, task.index)].interval for task in tasks if instances[(pe.index, l.index, task.index)].intcost > 0)
 
         for link in self.M.topology.g.edges():
             link_instances = [edge_instances[k] for k in edge_instances.keys() if k[6] == link]
