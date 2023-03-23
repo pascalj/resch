@@ -71,20 +71,28 @@ class Accelerator:
         return locations
 
 class Properties:
-    def __init__(self, pe_properties = {}, c_properties = {}, l_properties = {}):
-        self.P_p = pe_properties
-        self.P_c = c_properties
-        self.P_l = l_properties
+    def __init__(self, pe_properties = None, c_properties = None, l_properties = None):
+        if not pe_properties:
+            self.P_p = defaultdict(dict)
+        else:
+            self.P_p = pe_properties
 
-    def __get__item(self, key):
+        if not c_properties:
+            self.P_c = defaultdict(dict)
+        else:
+            self.P_c = c_properties
+
+        if not l_properties:
+            self.P_l = defaultdict(dict)
+        else:
+            self.P_l = l_properties
+
+    def __getitem__(self, key):
         if type(key) == PE:
-            assert(key in self.P_p)
             return self.P_p[key]
         if type(key) == Configuration:
-            assert(key in self.P_c)
             return self.P_c[key]
         if type(key) == Location:
-            assert(key in self.P_l)
             return self.P_l[key]
         assert(False)
 
@@ -227,6 +235,9 @@ class Machine:
 
     def locations(self):
         return self.accelerator.locations()
+
+    def location(self, index):
+        return next(l for l in self.locations() if l.index == index)
 
     def configurations(self):
         return self.accelerator.configurations()

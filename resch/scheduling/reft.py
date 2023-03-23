@@ -49,9 +49,6 @@ class REFT:
 
             # Schedule the task
             self.S.add_task(scheduled_task)
-            # Schedule edges in the edge schedule for all dependencies
-            # for instance in self.S.instances_for_tasks(self.G.dependencies(task)):
-            #     self.E.add_task(instance, scheduled_task)
 
         return (self.S, self.E)
 

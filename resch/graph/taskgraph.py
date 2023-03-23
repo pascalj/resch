@@ -119,7 +119,10 @@ class TaskGraph:
         if "label" in self.g.vp:
             label = self.g.vp.label[node_id]
         cost = self.w[node_id]
-        ttype = self.t[node_id]
+        if self.t[node_id]:
+            ttype = self.t[node_id]
+        else:
+            ttype = None
         return task.Task(node_id, label, cost, ttype)
 
     def tasks(self):

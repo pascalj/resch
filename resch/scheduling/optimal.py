@@ -21,7 +21,7 @@ class OptimalScheduler:
         G = self.G
         model = self.model
 
-        InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task")
+        InstanceVar = collections.namedtuple("Instance", "t_s cost t_f active interval pe location task ttype")
                                                             # ^^^^ only for NewOptionalIntervalVar
         LinkInstanceVar = collections.namedtuple("LinkInstance", "t_s cost t_f interval active")
 
@@ -41,7 +41,12 @@ class OptimalScheduler:
                     cost = model.NewIntVar(cost, cost, f"cost{suffix}")
                     t_f = model.NewIntVar(0, horizon, f"t_f{suffix}")
                     interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active{suffix}")
-                    instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task)
+
+                    # Ensure t(v) == P_P^t(pe)
+                    if task.type is not None and task.type != pe.type:
+                        model.Add(active == False)
+
+                    instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task, ttype=task.type)
 
         # Execute each task on exactly one placed PE
         for task in tasks:
@@ -55,6 +60,18 @@ class OptimalScheduler:
             rhs = instances[rhs_key]
             if r_l == l_l and lhs.pe.configuration != rhs.pe.configuration:
                 model.AddNoOverlap([lhs.interval, rhs.interval])
+                
+                # Ensure P_L^R(l_l)
+                if "r" in M.properties[M.location(l_l)]:
+                    overhead = M.properties[M.location(l_l)]["r"]
+                    lhs_before = model.NewBoolVar(f"lhs_before_{lhs_key}_{rhs_key}")
+                    model.Add(lhs.t_f < rhs.t_f).OnlyEnforceIf(lhs_before)
+                    model.Add(lhs.t_f >= rhs.t_f).OnlyEnforceIf(lhs_before.Not())
+
+                    model.Add(lhs.t_f + overhead < rhs.t_s).OnlyEnforceIf(lhs_before)
+                    model.Add(rhs.t_f + overhead < lhs.t_s).OnlyEnforceIf(lhs_before.Not())
+
+
 
 
         for task in tasks:
