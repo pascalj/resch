@@ -57,6 +57,9 @@ class TaskGraph:
         """ Number of total nodes """
         return self.g.num_vertices()
 
+    def num_edges(self):
+        return self.g.num_edges()
+
     def path_len(self, path, weights=None):
         """ Path length with w """
 

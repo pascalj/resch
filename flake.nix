@@ -18,6 +18,7 @@
           (pkgs.python3.withPackages(ps: with ps; [
             graph-tool
             ortools
+            pandas
 
             (buildPythonPackage rec {
               pname = "portion";

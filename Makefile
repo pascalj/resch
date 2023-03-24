@@ -2,6 +2,9 @@ init:
 	pip install -r requirements.txt
 
 test:
-	python3 -m unittest discover
+	python -m unittest discover
 
-.PHONY: init test
+bench:
+	python -m resch.evaluation.benchmark
+
+.PHONY: init test bench
