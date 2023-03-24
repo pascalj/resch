@@ -1,8 +1,7 @@
 from collections import defaultdict
-from graph_tool.all import Graph, GraphView
+from graph_tool import Graph, GraphView
 from graph_tool.topology import shortest_path
 from graph_tool.util import find_vertex
-from graph_tool.draw import graphviz_draw
 
 class IndexEqualityMixin(object):
     def __eq__(self, other):
@@ -218,7 +217,7 @@ class Topology:
         return self.g.ep.capacity[link]
 
     def show(self):
-        graphviz_draw(self.g, layout="dot", vprops={"label": self.g.vp.label})
+        pass
 
 
 class Machine:

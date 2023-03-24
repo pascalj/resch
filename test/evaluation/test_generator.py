@@ -4,7 +4,6 @@ from test.context import resch
 import resch.evaluation.generator as generator
 
 from test.fixtures import fixtures
-from graph_tool.all import graphviz_draw
 
 class TestGenerator(unittest.TestCase):
     def test_erdos(self):

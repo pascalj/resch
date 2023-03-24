@@ -2,7 +2,6 @@ import numpy as np
 import pdb
 from math import sqrt
 from graph_tool.topology import topological_sort, shortest_path
-from graph_tool.all import graphviz_draw
 from functools import cache
 from resch.scheduling import task
  
@@ -185,7 +184,7 @@ class TaskGraph:
         return self
 
     def show(self):
-        graphviz_draw(self.g, layout="dot")
+        pass
 
 
     @cache

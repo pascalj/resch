@@ -4,8 +4,6 @@ from collections import defaultdict
 import resch.scheduling.schedule as schedule
 import resch.scheduling.task as task_m
 
-from graph_tool.draw import graphviz_draw
-
 class REFT:
     def __init__(self, M, G, E_cls = schedule.NoEdgeSchedule):
         self.M = M

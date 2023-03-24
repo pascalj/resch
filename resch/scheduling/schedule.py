@@ -1,4 +1,4 @@
-from itertools import chain, pairwise
+from itertools import chain
 from functools import reduce
 from collections import defaultdict
 import portion as po

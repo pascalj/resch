@@ -5,7 +5,6 @@ import resch.machine.model as model
 from resch.machine.model import Location, Configuration, PE, Machine, Accelerator, Topology
 
 from test.fixtures import fixtures
-from graph_tool.all import graphviz_draw
 
 class TestModel(unittest.TestCase):
     def test_default_topo(self):

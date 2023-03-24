@@ -1,79 +1,54 @@
 {
-  description = "My Python application";
-
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
-
-    mach-nix = {
-      url = "github:DavHau/mach-nix/3.3.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-      inputs.pypi-deps-db.follows = "pypi-deps-db";
+    nixpkgs = {
+      url = "github:nixos/nixpkgs/22.11";
     };
-
-    pypi-deps-db = {
-      url = "github:DavHau/mach-nix/3.3.0";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
     };
   };
-  outputs = { self, nixpkgs, flake-utils, mach-nix, pypi-deps-db }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        python = "python310";
+  outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
+    let
+      pkgs = import nixpkgs {
+        inherit system;
+      };
+    in rec {
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          (pkgs.python3.withPackages(ps: with ps; [
+            graph-tool
+            ortools
 
-        inherit (nixpkgs.lib) concatStringsSep;
-
-        pkgs = import nixpkgs { inherit system; };
-        mach = import mach-nix { inherit pkgs python; };
-
-        devRequirements = ''
-        portion
+            (buildPythonPackage rec {
+              pname = "portion";
+              version = "2.4.0";
+              src = fetchPypi {
+                inherit pname version;
+                sha256 = "sha256-3rFjiehE2/mutlQmH85f69cg5HhsZpDvu53BFggiaEA=";
+              };
+              doCheck = false;
+              propagatedBuildInputs = [
+                (buildPythonPackage rec {
+                  pname = "sortedcontainers";
+                  version = "2.4.0";
+                  src = fetchPypi {
+                    inherit pname version;
+                    sha256 = "sha256-JcqloGzDC2uD0RQjQz9l0fnXbExqDJDjN56qQ7m/24g=";
+                  };
+                  doCheck = false;
+                })
+              ];
+            })
+          ]))
+        ];
+        shellHook = ''
+          export PIP_PREFIX=$(pwd)/_build/pip_packages #Dir where built packages are stored
+          export PYTHONPATH="$PIP_PREFIX/${pkgs.python3.sitePackages}:$PYTHONPATH"
+          export PATH="$PIP_PREFIX/bin:$PATH"
+          unset SOURCE_DATE_EPOCH
         '';
-
-        prodRequirements = ''
-          pip
-        '';
-
-        freeze = ''
-          mkdir -p $out
-          export out_file=$out/requirements.txt
-          pip list --format=freeze > $out/requirements.txt
-        '';
-
-        devPython = mach.mkPython {
-          requirements = concatStringsSep "\n" [
-            prodRequirements
-            devRequirements
-          ];
-        };
-
-        prodPython = mach.mkPython { requirements = prodRequirements; };
-      in
-      rec {
-        packages.prod = mach.buildPythonPackage {
-          src = ./.;
-          requirements = prodRequirements;
-        };
-
-        defaultPackage = packages.prod;
-
-        packages.devRequirements = pkgs.runCommand "dev_requirements"
-          {
-            buildInputs = [ devPython ];
-          }
-          freeze;
-
-        packages.prodRequirements = pkgs.runCommand "prod_requirements"
-          {
-            buildInputs = [ prodPython ];
-          }
-          freeze;
-
-        devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [
-            fd
-            pyright
-          ] ++ [ devPython ];
-        };
-      });
+      };
+    }
+  );
 }
+
