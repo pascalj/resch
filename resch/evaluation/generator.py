@@ -22,6 +22,7 @@ def erdos(n, p, cost_func = None, comcost_func = None, num_pes = 9):
             if i < j and uniform(0, 1) < p:
                 e = g.add_edge(i, j)
 
+    add_cost(g)
     add_dummy_tasks(g)
 
     return g
