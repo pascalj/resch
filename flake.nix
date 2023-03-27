@@ -19,6 +19,7 @@
             graph-tool
             ortools
             pandas
+            tqdm
 
             (buildPythonPackage rec {
               pname = "portion";

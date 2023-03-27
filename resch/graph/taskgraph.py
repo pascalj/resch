@@ -85,6 +85,8 @@ class TaskGraph:
 
         return self.path_len(self.cp(weights=weights), weights=weights)
 
+    def set_task_type(self, task, type):
+        self.t[task.index] = type
 
     def cp(self, weights=None):
         """ Returns the edge list of the critical path """
