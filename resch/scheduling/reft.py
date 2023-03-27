@@ -27,7 +27,6 @@ class REFT:
                 overhead = self.M.properties[l].get("r", 0)
                 for p in self.M.PEs():
                     if p.type != task.type:
-                        print(p.type, task.type)
                         continue
                     earliest = po.closedopen(self.data_ready_time(task, p, l), po.inf)
                     interval = self.S.EFT(task, p, l, earliest, overhead)

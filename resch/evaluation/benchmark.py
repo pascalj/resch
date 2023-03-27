@@ -102,11 +102,48 @@ def benchmark_random_reconf(repetitions):
             dfs.append(machine_benchmark(M, Gs, rft, {"benchmark": "REFT", "machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
+def benchmark_random_reconf_compare(repetitions):
+    Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(3, 11) for a in range(repetitions)]
+    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(3, 11) for a in range(repetitions)])
+    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(3, 11) for a in range(repetitions)])
+    Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(1, 4)]
+    Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 4)])
+
+    ntypes = 3
+
+    for G in Gs:
+        for task in G.tasks():
+            G.set_task_type(task, random.randint(1, ntypes))
+
+    for (machine, M) in Ms:
+        assert len(M.PEs()) >= ntypes
+        types = [i % ntypes + 1 for i in range(len(M.PEs()))]
+        random.shuffle(types)
+        for i, pe in enumerate(M.PEs()):
+            pe.type = types[i]
+
+    opt = lambda M, G: optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
+    rft = lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule()
+
+    overheads = range(0, 200, 10)
+    pbar = tqdm(desc="random_reconf", total = 2 * len(overheads) * len(Ms) * len(Gs))
+    dfs = []
+    for overhead in overheads:
+        for (machine, M) in Ms:
+            for loc in M.locations():
+                M.properties[loc]["r"] = overhead
+            dfs.append(machine_benchmark(M, Gs, opt, {"benchmark": "optimal", "machine": machine, "overhead": overhead}, pbar))
+            dfs.append(machine_benchmark(M, Gs, rft, {"benchmark": "REFT", "machine": machine, "overhead": overhead}, pbar))
+    return pd.concat(dfs)
+
+
 
     
 if __name__ == "__main__":
     os.makedirs("benchmarks", exist_ok=True)
     # with open("benchmarks/random_optimal_reft.csv", "w") as f:
     #     benchmark_random_optimal_reft(10).to_csv(f, index=False)
-    with open("benchmarks/random_reconf.csv", "w") as f:
-        benchmark_random_reconf(1).to_csv(f, index=False)
+    # with open("benchmarks/random_reconf.csv", "w") as f:
+    #     benchmark_random_reconf(1).to_csv(f, index=False)
+    with open("benchmarks/random_reconf_compare.csv", "w") as f:
+        benchmark_random_reconf_compare(1).to_csv(f, index=False)
