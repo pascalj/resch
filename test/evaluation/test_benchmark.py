@@ -18,9 +18,9 @@ class TestBenchmark(unittest.TestCase):
         def algo(M, G):
             return reft.REFT(M, G).schedule()
 
-        results = bench.machine_benchmark(M, Gs, algo)
+        results = bench.machine_benchmark(M, Gs, algo, {})
 
-        self.assertEqual(results.shape, (3,4))
+        self.assertEqual(results.shape, (3, 10))
 
 if __name__ == '__main__':
     unittest.main()

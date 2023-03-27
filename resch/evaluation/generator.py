@@ -13,6 +13,8 @@ def erdos(n, p, cost_func = None, comcost_func = None, num_pes = 9):
         p (): probability of to create an edge (i,j) with i<j
     """
     g = Graph()
+    g.gp["title"] = g.new_graph_property("string")
+    g.gp["title"] = "erdos"
 
     for _ in range(n):
         g.add_vertex()
@@ -39,6 +41,8 @@ def layer_by_layer(n, layers, p):
     """
 
     g = Graph()
+    g.gp["title"] = g.new_graph_property("string")
+    g.gp["title"] = "layer"
 
     g.vp["layer"] = g.new_vertex_property("int")
 
@@ -74,6 +78,8 @@ def random(n, sampler = None):
     if sampler is None:
         sampler = lambda: (randrange(3), randrange(3))
     g = generation.random_graph(n, sampler)
+    g.gp["title"] = g.new_graph_property("string")
+    g.gp["title"] = "random"
     tree = min_spanning_tree(g)
 
     g.set_edge_filter(tree)

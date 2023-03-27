@@ -24,13 +24,20 @@ class REFT:
             min_p = None
             min_l = None
             for l in self.M.locations():
+                overhead = self.M.properties[l].get("r", 0)
                 for p in self.M.PEs():
+                    if p.type != task.type:
+                        print(p.type, task.type)
+                        continue
                     earliest = po.closedopen(self.data_ready_time(task, p, l), po.inf)
-                    interval = self.S.EFT(task, p, l, earliest)
+                    interval = self.S.EFT(task, p, l, earliest, overhead)
                     if interval.upper < min.upper: # earliest finish time 8)
                         min = interval
                         min_p = p
                         min_l = l
+
+            assert(min_p)
+            assert(min_l)
 
             # Do the allocation
             dependencies = [int(i) for i in self.G.dependencies(task)]
@@ -39,8 +46,9 @@ class REFT:
                 if instance.task.index in dependencies:
                     edge_intervals.append(self.E.allocate_path(instance, task, min_p, min_l))
 
+            overhead = self.M.properties[min_l].get("r", 0)
             real_DFT = max([i.upper for i in edge_intervals], default = min.lower)
-            real_EFT = self.S.EFT(task, min_p, min_l, po.closedopen(real_DFT, po.inf))
+            real_EFT = self.S.EFT(task, min_p, min_l, po.closedopen(real_DFT, po.inf), )
 
             instance = schedule.Instance(task, min_p, min_l, real_EFT)
             scheduled_task = task_m.ScheduledTask(task, instance)

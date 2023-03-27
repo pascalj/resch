@@ -15,6 +15,7 @@ class TaskGraph:
         self.w_bar = self.w.mean(axis=1)
         self.c_bar = self.c
         self.w_min = np.argmin(self.w, axis=1)
+        self.title = self.g.gp.get("title", "No title")
         self.init_maps()
 
     def init_maps(self):

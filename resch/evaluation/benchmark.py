@@ -34,6 +34,7 @@ def machine_benchmark(M, Gs, algo, benchmark, pbar = None):
 
     metrics = pd.DataFrame([list(benchmark.values()) + [
         t,
+        G.title,
         G.num_nodes(),
         G.num_edges(),
         len(M.locations()),
@@ -43,7 +44,7 @@ def machine_benchmark(M, Gs, algo, benchmark, pbar = None):
         slr(S, G),
         slack(S, G),
     ] for ((S, E), G, t) in SGs],
-      columns=list(benchmark.keys()) + ["runtime", "num_nodes", "num_edges", "num_locations", "num_pes", "makespan", "speedup", "slr", "slack"])
+      columns=list(benchmark.keys()) + ["runtime", "graph", "num_nodes", "num_edges", "num_locations", "num_pes", "makespan", "speedup", "slr", "slack"])
 
     return metrics
 
@@ -69,14 +70,14 @@ def benchmark_random_optimal_reft(repetitions):
     return pd.concat(dfs)
 
 def benchmark_random_reconf(repetitions):
-    RGs = [taskgraph.TaskGraph(generator.random(i)) for i in range(3, 11) for a in range(repetitions)]
-    EGs = [taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(3, 11) for a in range(repetitions)]
-    LGs = [taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(3, 11) for a in range(repetitions)]
+    Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(3, 11) for a in range(repetitions)]
+    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(3, 11) for a in range(repetitions)])
+    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(3, 11) for a in range(repetitions)])
     Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(1, 4)]
 
     ntypes = 3
 
-    for G in RGs:
+    for G in Gs:
         for task in G.tasks():
             G.set_task_type(task, random.randint(1, ntypes))
 
@@ -88,21 +89,17 @@ def benchmark_random_reconf(repetitions):
             pe.type = types[i]
 
     opt = lambda M, G: optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
-    # rft = lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule()
+    rft = lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule()
 
     overheads = range(0, 200, 10)
-    pbar = tqdm(desc="random_reconf", total = len(overheads) * len(Ms) * len(RGs))
+    pbar = tqdm(desc="random_reconf", total = 1 * len(overheads) * len(Ms) * len(Gs))
     dfs = []
     for overhead in overheads:
         for (machine, M) in Ms:
             for loc in M.locations():
                 M.properties[loc]["r"] = overhead
-            dfs.append(machine_benchmark(M, RGs, opt, {"benchmark": "overhead", "generator": "random", "machine": machine, "overhead": overhead}, pbar))
-        # dfs.append(machine_benchmark(M, RGs, rft, {"benchmark": "REFT", "generator": "random", "machine": machine}))
-        # dfs.append(machine_benchmark(M, EGs, opt, {"benchmark": "overhead", "generator": "erdos", "machine": machine}))
-        # dfs.append(machine_benchmark(M, EGs, rft, {"benchmark": "REFT", "generator": "erdos", "machine": machine}))
-        # dfs.append(machine_benchmark(M, LGs, opt, {"benchmark": "overhead", "generator": "erdos", "machine": machine}))
-        # dfs.append(machine_benchmark(M, LGs, rft, {"benchmark": "REFT", "generator": "erdos", "machine": machine}))
+            # dfs.append(machine_benchmark(M, Gs, opt, {"benchmark": "optimal", "machine": machine, "overhead": overhead}, pbar))
+            dfs.append(machine_benchmark(M, Gs, rft, {"benchmark": "REFT", "machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
 

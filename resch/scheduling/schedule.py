@@ -31,7 +31,7 @@ class Schedule:
     def task(self, v):
         return next(iter([t for t in self.tasks if t.index == v]), None)
 
-    def EFT(self, task, p, loc, earliest):
+    def EFT(self, task, p, loc, earliest, overhead = 0):
         assert(task.index is not None)
         assert(p.index is not None)
         assert(loc.index is not None)
@@ -47,7 +47,11 @@ class Schedule:
         # Remove other instances on the same location with different configs
         for c_interval, c_id in self.A_l[loc.index].items():
             if c_id != p.configuration.index:
-                available = available - c_interval
+                int_w_reconf = c_interval.apply(
+                        lambda x: x.replace(
+                            lower = lambda v: v - overhead,
+                            upper = lambda v: v + overhead))
+                available = available - int_w_reconf
 
         for i in available:
             # is the end still in the same slot?
@@ -66,8 +70,8 @@ class Schedule:
         t_id = task.index
 
         # Ensure sure that the PE is not executing any other task
-        if self.A_p[(p_id, l_id)].domain().overlaps(instance.interval):
-            assert(False, f"{instance.interval}")
+        # if instance.interval.lower != instance.interval.upper and self.A_p[(p_id, l_id)].domain().overlaps(instance.interval):
+        #     assert False, f"{self.A_p[(p_id, l_id)]} and {instance.interval}"
         self.A_p[(p_id, l_id)][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id

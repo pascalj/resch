@@ -10,7 +10,7 @@
   <key id="key3" for="node" attr.name="it" attr.type="int" />
   <key id="key4" for="node" attr.name="j" attr.type="int" />
   <key id="key5" for="node" attr.name="label" attr.type="string" />
-  <key id="key6" for="node" attr.name="type" attr.type="short" />
+
 
   <graph id="G" edgedefault="directed" parse.nodeids="canonical" parse.edgeids="canonical" parse.order="nodesfirst">
 
@@ -23,7 +23,7 @@
       <data key="key3">0</data>
       <data key="key4">0</data>
       <data key="key5">(0,0,0)</data>
-      <data key="key6">1</data>
+
     </node>
     <node id="n1">
       <data key="key1">80, 60, 100, 100</data>
@@ -31,7 +31,7 @@
       <data key="key3">0</data>
       <data key="key4">1</data>
       <data key="key5">(0,0,1)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n2">
       <data key="key1">80, 60, 100, 100</data>
@@ -39,7 +39,7 @@
       <data key="key3">0</data>
       <data key="key4">0</data>
       <data key="key5">(0,1,0)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n3">
       <data key="key1">80, 60, 100, 100</data>
@@ -47,7 +47,7 @@
       <data key="key3">0</data>
       <data key="key4">2</data>
       <data key="key5">(0,0,2)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n4">
       <data key="key1">80, 60, 100, 100</data>
@@ -55,7 +55,7 @@
       <data key="key3">0</data>
       <data key="key4">0</data>
       <data key="key5">(0,2,0)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n5">
       <data key="key1">80, 60, 100, 100</data>
@@ -63,7 +63,7 @@
       <data key="key3">0</data>
       <data key="key4">3</data>
       <data key="key5">(0,0,3)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n6">
       <data key="key1">80, 60, 100, 100</data>
@@ -71,7 +71,7 @@
       <data key="key3">0</data>
       <data key="key4">0</data>
       <data key="key5">(0,3,0)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n7">
       <data key="key1">80, 60, 100, 100</data>
@@ -79,7 +79,7 @@
       <data key="key3">0</data>
       <data key="key4">1</data>
       <data key="key5">(0,1,1)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n8">
       <data key="key1">80, 60, 100, 100</data>
@@ -87,7 +87,7 @@
       <data key="key3">0</data>
       <data key="key4">2</data>
       <data key="key5">(0,1,2)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n9">
       <data key="key1">80, 60, 100, 100</data>
@@ -95,7 +95,7 @@
       <data key="key3">0</data>
       <data key="key4">3</data>
       <data key="key5">(0,1,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n10">
       <data key="key1">80, 60, 100, 100</data>
@@ -103,7 +103,7 @@
       <data key="key3">0</data>
       <data key="key4">1</data>
       <data key="key5">(0,2,1)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n11">
       <data key="key1">80, 60, 100, 100</data>
@@ -111,7 +111,7 @@
       <data key="key3">0</data>
       <data key="key4">2</data>
       <data key="key5">(0,2,2)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n12">
       <data key="key1">80, 60, 100, 100</data>
@@ -119,7 +119,7 @@
       <data key="key3">0</data>
       <data key="key4">3</data>
       <data key="key5">(0,2,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n13">
       <data key="key1">80, 60, 100, 100</data>
@@ -127,7 +127,7 @@
       <data key="key3">0</data>
       <data key="key4">1</data>
       <data key="key5">(0,3,1)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n14">
       <data key="key1">80, 60, 100, 100</data>
@@ -135,7 +135,7 @@
       <data key="key3">0</data>
       <data key="key4">2</data>
       <data key="key5">(0,3,2)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n15">
       <data key="key1">80, 60, 100, 100</data>
@@ -143,7 +143,7 @@
       <data key="key3">0</data>
       <data key="key4">3</data>
       <data key="key5">(0,3,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n16">
       <data key="key1">80, 60, 100, 100</data>
@@ -151,7 +151,7 @@
       <data key="key3">1</data>
       <data key="key4">1</data>
       <data key="key5">(1,1,1)</data>
-      <data key="key6">1</data>
+
     </node>
     <node id="n17">
       <data key="key1">80, 60, 100, 100</data>
@@ -159,7 +159,7 @@
       <data key="key3">1</data>
       <data key="key4">2</data>
       <data key="key5">(1,1,2)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n18">
       <data key="key1">80, 60, 100, 100</data>
@@ -167,7 +167,7 @@
       <data key="key3">1</data>
       <data key="key4">1</data>
       <data key="key5">(1,2,1)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n19">
       <data key="key1">80, 60, 100, 100</data>
@@ -175,7 +175,7 @@
       <data key="key3">1</data>
       <data key="key4">3</data>
       <data key="key5">(1,1,3)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n20">
       <data key="key1">80, 60, 100, 100</data>
@@ -183,7 +183,7 @@
       <data key="key3">1</data>
       <data key="key4">1</data>
       <data key="key5">(1,3,1)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n21">
       <data key="key1">80, 60, 100, 100</data>
@@ -191,7 +191,7 @@
       <data key="key3">1</data>
       <data key="key4">2</data>
       <data key="key5">(1,2,2)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n22">
       <data key="key1">80, 60, 100, 100</data>
@@ -199,7 +199,7 @@
       <data key="key3">1</data>
       <data key="key4">3</data>
       <data key="key5">(1,2,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n23">
       <data key="key1">80, 60, 100, 100</data>
@@ -207,7 +207,7 @@
       <data key="key3">1</data>
       <data key="key4">2</data>
       <data key="key5">(1,3,2)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n24">
       <data key="key1">80, 60, 100, 100</data>
@@ -215,7 +215,7 @@
       <data key="key3">1</data>
       <data key="key4">3</data>
       <data key="key5">(1,3,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n25">
       <data key="key1">80, 60, 100, 100</data>
@@ -223,7 +223,7 @@
       <data key="key3">2</data>
       <data key="key4">2</data>
       <data key="key5">(2,2,2)</data>
-      <data key="key6">1</data>
+
     </node>
     <node id="n26">
       <data key="key1">80, 60, 100, 100</data>
@@ -231,7 +231,7 @@
       <data key="key3">2</data>
       <data key="key4">3</data>
       <data key="key5">(2,2,3)</data>
-      <data key="key6">2</data>
+
     </node>
     <node id="n27">
       <data key="key1">80, 60, 100, 100</data>
@@ -239,7 +239,7 @@
       <data key="key3">2</data>
       <data key="key4">2</data>
       <data key="key5">(2,3,2)</data>
-      <data key="key6">3</data>
+
     </node>
     <node id="n28">
       <data key="key1">80, 60, 100, 100</data>
@@ -247,7 +247,7 @@
       <data key="key3">2</data>
       <data key="key4">3</data>
       <data key="key5">(2,3,3)</data>
-      <data key="key6">4</data>
+
     </node>
     <node id="n29">
       <data key="key1">80, 60, 100, 100</data>
@@ -255,7 +255,7 @@
       <data key="key3">3</data>
       <data key="key4">3</data>
       <data key="key5">(3,3,3)</data>
-      <data key="key6">1</data>
+
     </node>
 
    <!-- edges -->
