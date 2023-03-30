@@ -47,7 +47,7 @@ class REFT:
 
             overhead = self.M.properties[min_l].get("r", 0)
             real_DFT = max([i.upper for i in edge_intervals], default = min.lower)
-            real_EFT = self.S.EFT(task, min_p, min_l, po.closedopen(real_DFT, po.inf), )
+            real_EFT = self.S.EFT(task, min_p, min_l, po.closedopen(real_DFT, po.inf), overhead)
 
             instance = schedule.Instance(task, min_p, min_l, real_EFT)
             scheduled_task = task_m.ScheduledTask(task, instance)
