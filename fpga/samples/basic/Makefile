@@ -1,6 +1,6 @@
 PLATFORM ?= xilinx_u280_gen3x16_xdma_1_202211_1 
 TARGET ?= sw_emu
-FLAGS ?= -DNUM_PES=9
+FLAGS ?= -DNUM_PES=9 --hls.jobs=48 --report_dir=reports
 
 basic.xclbin: basic.xo
 	v++ $(FLAGS) -l  -t $(TARGET) --platform $(PLATFORM) -o basic.xclbin basic.xo
