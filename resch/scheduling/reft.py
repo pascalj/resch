@@ -15,11 +15,6 @@ class REFT:
         sorted_tasks = self.G.sorted_by_urank()
 
         for task in sorted_tasks:
-            # TODO: this needs to happen per dependency (see scheduly.py:83)
-            # and should move the t_s for task back for each of the
-            # dependencies. This means for EdgeSchedule there must be something
-            # equivalent to equivalent to ll schedule.py:84
-
             min = po.closedopen(0, po.inf)
             min_p = None
             min_l = None

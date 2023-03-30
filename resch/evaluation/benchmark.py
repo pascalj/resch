@@ -59,14 +59,15 @@ def benchmark_random_optimal_reft(repetitions):
     opt = lambda M, G: optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()
     rft = lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule()
 
+    pbar = tqdm(desc="random_optimal_reft", total = 2 * len(Ms) * (len(RGs) + len(EGs) + len(LGs)))
     dfs = []
     for (machine, M) in Ms:
-        dfs.append(machine_benchmark(M, RGs, opt, {"benchmark": "optimal", "generator": "random", "machine": machine}))
-        dfs.append(machine_benchmark(M, RGs, rft, {"benchmark": "REFT", "generator": "random", "machine": machine}))
-        dfs.append(machine_benchmark(M, EGs, opt, {"benchmark": "optimal", "generator": "erdos", "machine": machine}))
-        dfs.append(machine_benchmark(M, EGs, rft, {"benchmark": "REFT", "generator": "erdos", "machine": machine}))
-        dfs.append(machine_benchmark(M, LGs, opt, {"benchmark": "optimal", "generator": "layer", "machine": machine}))
-        dfs.append(machine_benchmark(M, LGs, rft, {"benchmark": "REFT", "generator": "layer", "machine": machine}))
+        dfs.append(machine_benchmark(M, RGs, opt, {"benchmark": "optimal", "generator": "random", "machine": machine}, pbar))
+        dfs.append(machine_benchmark(M, RGs, rft, {"benchmark": "REFT", "generator": "random", "machine": machine}, pbar))
+        dfs.append(machine_benchmark(M, EGs, opt, {"benchmark": "optimal", "generator": "erdos", "machine": machine}, pbar))
+        dfs.append(machine_benchmark(M, EGs, rft, {"benchmark": "REFT", "generator": "erdos", "machine": machine}, pbar))
+        dfs.append(machine_benchmark(M, LGs, opt, {"benchmark": "optimal", "generator": "layer", "machine": machine}, pbar))
+        dfs.append(machine_benchmark(M, LGs, rft, {"benchmark": "REFT", "generator": "layer", "machine": machine}, pbar))
     return pd.concat(dfs)
 
 def benchmark_random_reconf(repetitions):
@@ -98,7 +99,7 @@ def benchmark_random_reconf(repetitions):
         for (machine, M) in Ms:
             for loc in M.locations():
                 M.properties[loc]["r"] = overhead
-            # dfs.append(machine_benchmark(M, Gs, opt, {"benchmark": "optimal", "machine": machine, "overhead": overhead}, pbar))
+            dfs.append(machine_benchmark(M, Gs, opt, {"benchmark": "optimal", "machine": machine, "overhead": overhead}, pbar))
             dfs.append(machine_benchmark(M, Gs, rft, {"benchmark": "REFT", "machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
@@ -106,8 +107,8 @@ def benchmark_random_reconf_compare(repetitions):
     Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(3, 11) for a in range(repetitions)]
     Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(3, 11) for a in range(repetitions)])
     Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(3, 11) for a in range(repetitions)])
-    Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(1, 4)]
-    Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 4)])
+    Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(3, 4)]
+    Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 2)])
 
     ntypes = 3
 
@@ -126,7 +127,7 @@ def benchmark_random_reconf_compare(repetitions):
     rft = lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule()
 
     overheads = range(0, 200, 10)
-    pbar = tqdm(desc="random_reconf", total = 2 * len(overheads) * len(Ms) * len(Gs))
+    pbar = tqdm(desc="random_reconf_compare", total = repetitions * 2 * len(overheads) * len(Ms) * len(Gs))
     dfs = []
     for overhead in overheads:
         for (machine, M) in Ms:
@@ -136,14 +137,14 @@ def benchmark_random_reconf_compare(repetitions):
             dfs.append(machine_benchmark(M, Gs, rft, {"benchmark": "REFT", "machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
-
-
-    
 if __name__ == "__main__":
     os.makedirs("benchmarks", exist_ok=True)
-    # with open("benchmarks/random_optimal_reft.csv", "w") as f:
-    #     benchmark_random_optimal_reft(10).to_csv(f, index=False)
-    # with open("benchmarks/random_reconf.csv", "w") as f:
-    #     benchmark_random_reconf(1).to_csv(f, index=False)
-    with open("benchmarks/random_reconf_compare.csv", "w") as f:
-        benchmark_random_reconf_compare(1).to_csv(f, index=False)
+    if not os.path.exists("benchmarks/random_optimal_reft.csv"):
+        with open("benchmarks/random_optimal_reft.csv", "w") as f:
+            benchmark_random_optimal_reft(1).to_csv(f, index=False)
+    if not os.path.exists("benchmarks/random_reconf.csv"):
+        with open("benchmarks/random_reconf.csv", "w") as f:
+            benchmark_random_reconf(1).to_csv(f, index=False)
+    if not os.path.exists("benchmarks/random_reconf_compare.csv"):
+        with open("benchmarks/random_reconf_compare.csv", "w") as f:
+            benchmark_random_reconf_compare(1).to_csv(f, index=False)
