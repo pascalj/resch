@@ -15,6 +15,7 @@
     in rec {
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
+          pkgs.miller
           (pkgs.python3.withPackages(ps: with ps; [
             graph-tool
             ortools
