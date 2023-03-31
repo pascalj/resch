@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, pairwise
 from functools import reduce
 from collections import defaultdict
 import portion as po
@@ -31,7 +31,7 @@ class Schedule:
     def task(self, v):
         return next(iter([t for t in self.tasks if t.index == v]), None)
 
-    def EFT(self, task, p, loc, earliest, overhead = 0):
+    def EFT(self, task, p, loc, earliest, overhead):
         assert(task.index is not None)
         assert(p.index is not None)
         assert(loc.index is not None)
@@ -47,6 +47,7 @@ class Schedule:
         # Remove other instances on the same location with different configs
         for c_interval, c_id in self.A_l[loc.index].items():
             if c_id != p.configuration.index:
+                available_pre = available
                 int_w_reconf = c_interval.apply(
                         lambda x: x.replace(
                             lower = lambda v: v - overhead,
@@ -69,9 +70,13 @@ class Schedule:
         l_id = instance.location.index
         t_id = task.index
 
+        if instance.interval.lower == instance.interval.upper:
+            return
+
         # Ensure sure that the PE is not executing any other task
-        # if instance.interval.lower != instance.interval.upper and self.A_p[(p_id, l_id)].domain().overlaps(instance.interval):
-        #     assert False, f"{self.A_p[(p_id, l_id)]} and {instance.interval}"
+        assert not self.A_p[(p_id, l_id)].domain().overlaps(instance.interval),\
+             f"{self.A_p[(p_id, l_id)]} and {instance.interval} overlap"
+
         self.A_p[(p_id, l_id)][instance.interval] = t_id
         # Overlap is allowed if c_id is the same
         self.A_l[l_id][instance.interval] = c_id
@@ -79,6 +84,27 @@ class Schedule:
     def instances_for_tasks(self, tasks):
         int_tasks = [int(t) for t in tasks]
         return [i for i in self.instances if i.task.index in int_tasks]
+
+    def instance(self, task):
+        instance = [i for i in self.instances if i.task.index == task.index]
+        assert len(instance) == 1
+        return instance[0]
+
+    def validate(self, G, M):
+        for task in G.tasks():
+            t_instance = self.instance(task)
+            for dep in G.task_dependencies(task):
+                dep_instance = self.instance(dep)
+                if dep_instance.interval.lower != dep_instance.interval.upper:
+                    assert t_instance.interval > self.instance(dep).interval, f"{t_instance.interval} should come after {self.instance(dep).interval}"
+
+        for loc in M.locations():
+            overhead = M.properties[loc].get("r", 0)
+            for lhs, rhs in pairwise(self.A_l[loc.index]):
+                lhs_with_overhead = lhs.apply(lambda x: x.replace(upper = lambda v: v + overhead, lower=lambda v: v - overhead) if x.lower != x.upper else x)
+                assert (lhs_with_overhead & rhs).empty,\
+                    f"{lhs} to {rhs} requires {overhead} overhead ({lhs_with_overhead & rhs})"
+
 
     def to_csv(self, file_handle):
         rows = ["config,pe,location,t_s,t_f,task\n"]
