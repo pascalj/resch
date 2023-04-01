@@ -98,7 +98,7 @@ def benchmark_random_reconf(repetitions):
             ("REFT", lambda M, G: reft.REFT(M, G, schedule.NoEdgeSchedule).schedule())]
 
     overheads = range(0, 200, 10)
-    pbar = tqdm(desc="random_reconf", total = 1 * len(overheads) * len(Ms) * len(Gs))
+    pbar = tqdm(desc="random_reconf", total = len(algos) * len(overheads) * len(Ms) * len(Gs))
     dfs = []
     for overhead in overheads:
         for (machine, M) in Ms:
@@ -108,9 +108,9 @@ def benchmark_random_reconf(repetitions):
     return pd.concat(dfs)
 
 def benchmark_random_reconf_compare(repetitions):
-    Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(10, 11) for a in range(repetitions)]
-    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(10, 11) for a in range(repetitions)])
-    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(10, 11) for a in range(repetitions)])
+    Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(3, 11) for a in range(repetitions)]
+    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.2)) for i in range(3, 11) for a in range(repetitions)])
+    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, 3, 0.2)) for i in range(3, 11) for a in range(repetitions)])
 
     Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(3, 4)]
     Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 2)])
@@ -132,9 +132,8 @@ def benchmark_random_reconf_compare(repetitions):
             ("optimal", lambda M, G: optimal.OptimalScheduler(M, G, schedule.NoEdgeSchedule).schedule()),
             ("REFT", lambda M, G: reft.REFT(M, G, schedule.NoEdgeSchedule).schedule())]
 
-    # overheads = range(0, 200, 10)
-    overheads = range(10, 200, 10)
-    pbar = tqdm(desc="random_reconf_compare", total = 2 * len(overheads) * len(Ms) * len(Gs))
+    overheads = range(0, 210, 10)
+    pbar = tqdm(desc="random_reconf_compare", total = len(algos) * len(overheads) * len(Ms) * len(Gs))
     dfs = []
     for overhead in overheads:
         for (machine, M) in Ms:
@@ -147,10 +146,10 @@ if __name__ == "__main__":
     os.makedirs("benchmarks", exist_ok=True)
     if not os.path.exists("benchmarks/random_optimal_reft.csv"):
         with open("benchmarks/random_optimal_reft.csv", "w") as f:
-            benchmark_random_optimal_reft(1).to_csv(f, index=False)
+            benchmark_random_optimal_reft(10).to_csv(f, index=False)
     if not os.path.exists("benchmarks/random_reconf.csv"):
         with open("benchmarks/random_reconf.csv", "w") as f:
-            benchmark_random_reconf(1).to_csv(f, index=False)
+            benchmark_random_reconf(10).to_csv(f, index=False)
     if not os.path.exists("benchmarks/random_reconf_compare.csv"):
         with open("benchmarks/random_reconf_compare.csv", "w") as f:
             benchmark_random_reconf_compare(10).to_csv(f, index=False)
