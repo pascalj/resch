@@ -69,8 +69,8 @@ class OptimalScheduler:
                         model.Add(lhs.t_f < rhs.t_f).OnlyEnforceIf(lhs_before)
                         model.Add(lhs.t_f >= rhs.t_f).OnlyEnforceIf(lhs_before.Not())
 
-                        model.Add(lhs.t_f + overhead < rhs.t_s).OnlyEnforceIf(lhs_before)
-                        model.Add(rhs.t_f + overhead < lhs.t_s).OnlyEnforceIf(lhs_before.Not())
+                        model.Add(lhs.t_f + overhead <= rhs.t_s).OnlyEnforceIf(lhs_before).OnlyEnforceIf(lhs.active).OnlyEnforceIf(rhs.active)
+                        model.Add(rhs.t_f + overhead <= lhs.t_s).OnlyEnforceIf(lhs_before.Not()).OnlyEnforceIf(lhs.active).OnlyEnforceIf(rhs.active)
 
 
 
