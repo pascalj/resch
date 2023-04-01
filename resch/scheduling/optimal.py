@@ -58,17 +58,28 @@ class OptimalScheduler:
             (r_pe, r_l, r_t) = rhs_key
             lhs = instances[lhs_key]
             rhs = instances[rhs_key]
+
+            # If the instances are on the same location but use different configurations...
             if r_l == l_l and lhs.pe.configuration != rhs.pe.configuration:
                 if lhs.intcost > 0 and rhs.intcost > 0:
+                    # First ensure no overlap
                     model.AddNoOverlap([lhs.interval, rhs.interval])
 
-                    # Ensure P_L^R(l_l)
+                    # If there is an overhead property set, ensure that it is kept P_L^R(l_l)
                     if "r" in M.properties[M.location(l_l)]:
                         overhead = M.properties[M.location(l_l)]["r"]
+
+                        # Introduce a boolean value for "lhs executes before rhs"...
                         lhs_before = model.NewBoolVar(f"lhs_before_{lhs_key}_{rhs_key}")
                         model.Add(lhs.t_f < rhs.t_f).OnlyEnforceIf(lhs_before)
                         model.Add(lhs.t_f >= rhs.t_f).OnlyEnforceIf(lhs_before.Not())
 
+                        # ... and ensure that the overhead is either added before or after lhs.
+                        #
+                        # See the channeling page of OR-Tools how that works
+                        # https://github.com/google/or-tools/blob/stable/ortools/sat/docs/channeling.md#if-then-else-expressions
+                        #
+                        # Important: make sure that both lhs and rhs are active, the OptionalInterval logic does not work here automatically...
                         model.Add(lhs.t_f + overhead <= rhs.t_s).OnlyEnforceIf(lhs_before).OnlyEnforceIf(lhs.active).OnlyEnforceIf(rhs.active)
                         model.Add(rhs.t_f + overhead <= lhs.t_s).OnlyEnforceIf(lhs_before.Not()).OnlyEnforceIf(lhs.active).OnlyEnforceIf(rhs.active)
 
