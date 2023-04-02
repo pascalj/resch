@@ -16,6 +16,7 @@
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
           pkgs.miller
+          pkgs.q-text-as-data
           (pkgs.python3.withPackages(ps: with ps; [
             graph-tool
             ortools
