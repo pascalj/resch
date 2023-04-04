@@ -6,7 +6,7 @@ from functools import cache
 from resch.scheduling import task
  
 class TaskGraph:
-    def __init__(self, g):
+    def __init__(self, g, parameters = {}):
         (g, w, c, t) = self.from_graph(g)
         self.g = g
         self.w = w
@@ -16,6 +16,7 @@ class TaskGraph:
         self.c_bar = self.c
         self.w_min = np.argmin(self.w, axis=1)
         self.title = self.g.gp.get("title", "No title")
+        self.parameters = parameters
         self.init_maps()
 
     def init_maps(self):
