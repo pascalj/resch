@@ -121,7 +121,7 @@ def benchmark_random_reconf(repetitions):
         for (machine, M) in Ms:
             for loc in M.locations():
                 M.properties[loc]["r"] = overhead
-            dfs.append(machine_benchmark(M, Gs, algos, {"machine": machine, "overhead": overhead}, pbar))
+            dfs.extend(machine_benchmark(M, Gs, algos, {"machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
 def benchmark_random_reconf_compare(repetitions):
@@ -156,7 +156,7 @@ def benchmark_random_reconf_compare(repetitions):
         for (machine, M) in Ms:
             for loc in M.locations():
                 M.properties[loc]["r"] = overhead
-            dfs.append(machine_benchmark(M, Gs, algos, {"machine": machine, "overhead": overhead}, pbar))
+            dfs.extend(machine_benchmark(M, Gs, algos, {"machine": machine, "overhead": overhead}, pbar))
     return pd.concat(dfs)
 
 def benchmark_random_params(repetitions):
@@ -192,10 +192,10 @@ def benchmark_random_params(repetitions):
         for (machine, M) in Ms:
             for loc in M.locations():
                 M.properties[loc]["r"] = overhead
-                for G in Gs:
-                    for algo in algos:
-                        dfs.append(single_benchmark(M, G, algo, {"machine": machine, "overhead": overhead, benchmark: algo[0]} | G.parameters, pbar))
-    return pd.concat(dfs)
+            for G in Gs:
+                for algo in algos:
+                    dfs.append(single_benchmark(M, G, algo, {"machine": machine, "overhead": overhead} | G.parameters, pbar))
+    return pd.concat(dfs, ignore_index = True)
 
 
 if __name__ == "__main__":
