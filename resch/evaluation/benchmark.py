@@ -161,8 +161,8 @@ def benchmark_random_reconf_compare(repetitions):
 
 def benchmark_random_params(repetitions):
     Gs = [taskgraph.TaskGraph(generator.random(i)) for i in range(10, 11) for a in range(repetitions)]
-    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 1 / p_i), {"p": 1 / p_i}) for i in range(10, 11) for p_i in range(1, 10) for a in range(repetitions)])
-    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, l, 1 / p_i), {"p": 1 / p_i, "l": l}) for i in range(10, 11) for l in range(1, 11) for p_i in range(1, 10) for a in range(repetitions)])
+    Gs.extend([taskgraph.TaskGraph(generator.erdos(i, 0.1 * p_i), {"p": 0.1 * p_i}) for i in range(10, 11) for p_i in range(1, 10) for a in range(repetitions)])
+    Gs.extend([taskgraph.TaskGraph(generator.layer_by_layer(i, l, 0.1 * p_i), {"p": 0.1 * p_i, "l": l}) for i in range(10, 11) for l in range(1, 11) for p_i in range(1, 10) for a in range(repetitions)])
 
     Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(3, 4)]
     Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 2)])
@@ -211,4 +211,4 @@ if __name__ == "__main__":
             benchmark_random_reconf_compare(10).to_csv(f, index=False)
     if not os.path.exists("benchmarks/random_params.csv"):
         with open("benchmarks/random_params.csv", "w") as f:
-            benchmark_random_params(1).to_csv(f, index=False)
+            benchmark_random_params(10).to_csv(f, index=False)
