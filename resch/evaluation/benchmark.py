@@ -196,13 +196,100 @@ def benchmark_random_params(repetitions):
                 for algo in algos:
                     dfs.append(single_benchmark(M, G, algo, {"machine": machine, "overhead": overhead} | G.parameters, pbar))
     return pd.concat(dfs, ignore_index = True)
+def benchmark_random_communication(repetitions):
+    Gs = ([taskgraph.TaskGraph(generator.erdos(i, 0.1 * p_i, None, lambda x, y: c), {"p": 0.1 * p_i, "c": c}) for i in range(10, 11) for p_i in range(9, 10) for c in range(0, 210, 10) for a in range(repetitions)])
+
+    Ms = [("pr", fixtures.pr_machine(p, l)) for p in range(3, 4) for l in range(3, 4)]
+    Ms.extend([("r", fixtures.r_machine([p], l)) for p in range(3, 4) for l in range(1, 2)])
+
+    ntypes = 3
+
+    for G in Gs:
+        for task in G.tasks():
+            G.set_task_type(task, random.randint(1, ntypes))
+
+    for (machine, M) in Ms:
+        assert len(M.PEs()) >= ntypes
+        types = [i % ntypes + 1 for i in range(len(M.PEs()))]
+        random.shuffle(types)
+        for i, pe in enumerate(M.PEs()):
+            pe.type = types[i]
+
+    algos = [
+            ("optimal", lambda M, G: optimal.OptimalScheduler(M, G, schedule.NoEdgeSchedule).schedule()),
+            ("REFT", lambda M, G: reft.REFT(M, G, schedule.NoEdgeSchedule).schedule()),
+            ("optimal_edge", lambda M, G: optimal.OptimalScheduler(M, G, schedule.EdgeSchedule).schedule()),
+            ("REFT_edge", lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule())]
+
+    pbar = tqdm(desc="random_communication", total = len(algos) * len(Ms) * len(Gs))
+
+    dfs = []
+    for (machine, M) in Ms:
+        for G in Gs:
+            for algo in algos:
+                dfs.append(single_benchmark(M, G, algo, {"machine": machine} | G.parameters, pbar))
+    return pd.concat(dfs, ignore_index = True)
+
+def benchmark_random_large(repetitions, max_size, max_types, max_pes, max_locations):
+    Gs = []
+    gbar = tqdm(desc="random_large: generate", total = repetitions * ((max_size) / 10 - 10) * max_types)
+    i = 0
+    for a in range(repetitions):
+        for ntypes in range(1, max_types):
+            tGs = []
+            for i in [10, max_size]:
+                for imbalance in range(0, 99, 30):
+                    cost_func = lambda v, p: 100 - (random.randint(0, imbalance) * random.choice([-1, 1]))
+                    for CCR in range(0, 210, 50):
+                        comcost_func = lambda i, j: CCR
+                        # tGs.append(taskgraph.TaskGraph(generator.random(i, None, cost_func, comcost_func), {"c": CCR, "imbalance": imbalance}))
+                        i = i + 1
+                        for p_i in range(0, 10): 
+                            tGs.append(taskgraph.TaskGraph(generator.erdos(i, 0.1 * p_i, cost_func, comcost_func), {"c": CCR, "imbalance": imbalance, "p": 0.1 * p_i}))
+                            # i = i + 1
+                            # tGs.append(taskgraph.TaskGraph(generator.layer_by_layer(i, int(max_size / 5), 0.1 * p_i, cost_func, comcost_func), {"c": CCR, "imbalance": imbalance, "p": 0.1 * p_i, "l": int(max_size / 5)}))
+                            i = i + 1
+                gbar.update(1)
+            for G in tGs:
+                G.parameters["types"] = ntypes
+                for task in G.tasks():
+                    G.set_task_type(task, random.randint(1, ntypes))
+            Gs.extend(tGs)
+    print(i)
+
+    # Gs = ([taskgraph.TaskGraph(generator.erdos(i, 0.1 * p_i, None, lambda x, y: c), {"p": 0.1 * p_i, "c": c}) for i in range(10, 11) for p_i in range(9, 10) for c in range(0, 210, 10) for a in range(repetitions)])
+
+    Ms = [("pr", fixtures.pr_machine(p, l)) for p in [1, max_pes] for l in [1, max_locations]]
+    Ms.extend([("r", fixtures.r_machine([p], l)) for p in [1, max_pes] for l in [1, max_locations]])
+
+    for (machine, M) in Ms:
+        # assert len(M.PEs()) >= ntypes
+        types = [i % ntypes + 1 for i in range(len(M.PEs()))]
+        random.shuffle(types)
+        for i, pe in enumerate(M.PEs()):
+            pe.type = types[i]
+
+    algos = [
+            ("REFT", lambda M, G: reft.REFT(M, G, schedule.NoEdgeSchedule).schedule()),
+            ("REFT_edge", lambda M, G: reft.REFT(M, G, schedule.EdgeSchedule).schedule())]
+
+    pbar = tqdm(desc="random_large", total = len(algos) * len(Ms) * len(Gs))
+
+    dfs = []
+    for (machine, M) in Ms:
+        for G in Gs:
+            for algo in algos:
+                if G.parameters["types"] <= len(M.PEs()):
+                    dfs.append(single_benchmark(M, G, algo, {"machine": machine} | G.parameters, pbar))
+    return pd.concat(dfs, ignore_index = True)
+
 
 
 if __name__ == "__main__":
     os.makedirs("benchmarks", exist_ok=True)
     if not os.path.exists("benchmarks/random_optimal_reft.csv"):
         with open("benchmarks/random_optimal_reft.csv", "w") as f:
-            benchmark_random_optimal_reft(1).to_csv(f, index=False)
+            benchmark_random_optimal_reft(10).to_csv(f, index=False)
     if not os.path.exists("benchmarks/random_reconf.csv"):
         with open("benchmarks/random_reconf.csv", "w") as f:
             benchmark_random_reconf(10).to_csv(f, index=False)
@@ -212,3 +299,10 @@ if __name__ == "__main__":
     if not os.path.exists("benchmarks/random_params.csv"):
         with open("benchmarks/random_params.csv", "w") as f:
             benchmark_random_params(10).to_csv(f, index=False)
+    if not os.path.exists("benchmarks/random_communication.csv"):
+        with open("benchmarks/random_communication.csv", "w") as f:
+            benchmark_random_communication(10).to_csv(f, index=False)
+    if not os.path.exists("benchmarks/random_large.csv"):
+        with open("benchmarks/random_large.csv", "w") as f:
+            # benchmark_random_large(repetitions, max_size, max_types, max_pes, max_locations):
+            benchmark_random_large(1, 100, 5, 5, 5).to_csv(f, index=False)

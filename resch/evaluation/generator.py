@@ -24,12 +24,12 @@ def erdos(n, p, cost_func = None, comcost_func = None, num_pes = 9):
             if i < j and uniform(0, 1) < p:
                 e = g.add_edge(i, j)
 
-    add_cost(g)
+    add_cost(g, cost_func, comcost_func)
     add_dummy_tasks(g)
 
     return g
 
-def layer_by_layer(n, layers, p):
+def layer_by_layer(n, layers, p, cost_func = None, comcost_func = None):
     """
 
     Generate a task graph with the layer-by-layer technique
@@ -59,11 +59,11 @@ def layer_by_layer(n, layers, p):
                 if uniform(0, 1) < p:
                     g.add_edge(v_p, v_n)
 
-    add_cost(g)
+    add_cost(g, cost_func, comcost_func)
     add_dummy_tasks(g)
     return g
 
-def random(n, sampler = None):
+def random(n, sampler = None, cost_func = None, comcost_func = None):
     """
 
     Create a uniform random task graph
@@ -84,7 +84,7 @@ def random(n, sampler = None):
 
     g.set_edge_filter(tree)
 
-    add_cost(g)
+    add_cost(g, cost_func, comcost_func)
     add_dummy_tasks(g)
 
     return g
