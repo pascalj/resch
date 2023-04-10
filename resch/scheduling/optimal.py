@@ -25,7 +25,7 @@ class OptimalScheduler:
                                                             # ^^^^ only for NewOptionalIntervalVar
         LinkInstanceVar = collections.namedtuple("LinkInstance", "t_s cost t_f interval active")
 
-        horizon = 5000
+        horizon = 10000
         instances = {}
         config_active = {}
         edge_instances = {}
@@ -109,10 +109,10 @@ class OptimalScheduler:
                                         t_s = model.NewIntVar(0, horizon, f"t_s{suffix}")
                                         cost_val = int(edge_cost / self.M.topology.relative_capacity(link))
                                         cost = model.NewIntVar(cost_val, cost_val, f"cost{suffix}")
-                                        model.Add(t_s > instances[(src_pe.index, src_l.index, dependency.index)].t_f).OnlyEnforceIf(edge_active)
+                                        model.Add(t_s >= instances[(src_pe.index, src_l.index, dependency.index)].t_f).OnlyEnforceIf(edge_active)
                                         model.Add(t_f > instances[(src_pe.index, src_l.index, dependency.index)].t_f).OnlyEnforceIf(edge_active)
                                         model.Add(t_s < instances[(dst_pe.index, dst_l.index, task.index)].t_s).OnlyEnforceIf(edge_active)
-                                        model.Add(t_f < instances[(dst_pe.index, dst_l.index, task.index)].t_s).OnlyEnforceIf(edge_active)
+                                        model.Add(t_f <= instances[(dst_pe.index, dst_l.index, task.index)].t_s).OnlyEnforceIf(edge_active)
                                         interval = model.NewOptionalIntervalVar(t_s, cost, t_f, edge_active, f"interval{suffix}")
                                         instance = LinkInstanceVar(t_s=t_s, cost=cost, t_f=t_f, interval=interval, active=edge_active)
                                         assert((src_pe.index, src_l.index, dst_pe.index, dst_l.index, dependency.index, task.index, link_id) not in edge_instances)
@@ -182,7 +182,7 @@ class ScheduleBuilder(cp_model.CpSolverSolutionCallback):
         for k, i in self.edge_instances.items():
             if self.Value(i.active):
                 (src_pe, src_l, dst_pe, dst_l, src_task_index, dst_task_index, link) = k
-                assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_s))
+                assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) <= self.Value(i.t_s))
                 assert(self.Value(self.instances[(src_pe, src_l, src_task_index)].t_f) < self.Value(i.t_f))
                 interval = po.closedopen(self.Value(i.t_s), self.Value(i.t_f))
                 if not interval.empty:

@@ -191,12 +191,6 @@ class EdgeSchedule:
 
         assert(False)
 
-    # def add_task(self, src_instance, scheduled_task):
-    #     if src_instance.pe == scheduled_task.instance.pe:
-    #         return
-
-    #     self.allocate_path(src_instance, scheduled_task, scheduled_task.instance.interval.lower)
-
     def allocate_path(self, src_instance, dst_task, dst_PE, dst_loc):
         path = self.topo.pe_path(src_instance.placed_pe(), (dst_PE.index, dst_loc.index))
         if len(path) == 0:
