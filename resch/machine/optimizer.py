@@ -1,6 +1,6 @@
 import numpy as np
-from geneticalgorithm import geneticalgorithm as ga
-from .. import machine, printer, graph, heft.reft
+# from .. import machine, printer, graph, schedule
+from resch import machine, graph
 from collections import defaultdict
 import pygad
 
@@ -15,42 +15,42 @@ class GA:
         # PE -> configuration
         rho = 20
         loc_properties = {
-            'lut': 1866240,
-            'ff': 3732480,
-            'ram': 11721,
-            'dsp': 5760,
+            'lut': 1866240 - 100000,
+            'ff': 3732480 - 275150,
+            'ram': 11721 - 467,
+            'dsp': 5760 - 0,
             'c': rho
         }
-        locs = [machine.Location(0, loc_properties), machine.Location(1, loc_properties)]
+        locs = [machine.Location(0, loc_properties)]
 
         PEs = []
         pe_properties = [
             {
-                'lut': 334829,
-                'ff': 442480,
-                'ram': 1062,
-                'dsp': 268,
+                'lut': 10421,
+                'ff': 25554,
+                'ram': 174,
+                'dsp': 6,
                 't': 1
             },
             {
-                'lut': 334829,
-                'ff': 442480,
-                'ram': 1062,
-                'dsp': 268,
+                'lut': 10667,
+                'ff': 26992,
+                'ram': 154,
+                'dsp': 6,
                 't': 2
             },
             {
-                'lut': 334829,
-                'ff': 442480,
-                'ram': 1062,
-                'dsp': 268,
+                'lut': 5454,
+                'ff': 12976,
+                'ram': 83,
+                'dsp': 4,
                 't': 3
             },
             {
-                'lut': 158300,
-                'ff': 635522,
-                'ram': 7680,
-                'dsp': 2148,
+                'lut': 5454,
+                'ff': 13169,
+                'ram': 80,
+                'dsp': 4,
                 't': 4
             }
         ]
@@ -92,7 +92,7 @@ class GA:
             mm = self.chromosome_to_mm(x)
             w = self.apply_cong(mm)
             R = heft.reft.REFT(self.g, w, self.c, mm)
-            S = R.schedule()
+            (S, E) = R.schedule()
             print(w.mean(), S.length(), x)
             return 1.0/S.length()
 
@@ -109,13 +109,14 @@ def main():
     import sys
 
     if len(sys.argv) < 2:
-        usage()
         return 1;
 
-    (g, w, c) = graph.load(sys.argv[1])
+    g = graph.load(sys.argv[1])
 
-    ga = GA(g, w, c)
-    solution = ga.generate(w.shape[1])
+    print(g)
+
+    ga = GA(g, g.w, g.c)
+    solution = ga.generate(g.w.shape[1])
     print(solution)
 
     if len(sys.argv) > 2:

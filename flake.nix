@@ -24,6 +24,21 @@
             tqdm
 
             (buildPythonPackage rec {
+              pname = "pygad";
+              version = "3.0.0";
+              src = fetchPypi {
+                inherit pname version;
+                sha256 = "sha256-Dk8Ciy7YwGg5/eQ3RT9vBtoNXS9U53sqg/9Dwb+XjUQ=";
+              };
+              doCheck = false;
+              propagatedBuildInputs = [
+                numpy
+                cloudpickle
+                matplotlib
+              ];
+            })
+
+            (buildPythonPackage rec {
               pname = "portion";
               version = "2.4.0";
               src = fetchPypi {
