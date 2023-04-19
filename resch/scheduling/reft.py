@@ -21,7 +21,8 @@ class REFT:
             for l in self.M.locations():
                 overhead = self.M.properties[l].get("r", 0)
                 for p in self.M.PEs():
-                    if p.type != task.type:
+                    # print(task.index, self.M.properties[p]["t"], task.type)
+                    if self.M.properties[p]["t"] != task.type:
                         continue
                     earliest = po.closedopen(self.data_ready_time(task, p, l), po.inf)
                     interval = self.S.EFT(task, p, l, earliest, overhead)

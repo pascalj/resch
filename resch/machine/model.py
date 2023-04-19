@@ -41,7 +41,7 @@ class PE:
         self.index = index
         self.properties = properties
         self.configuration = configuration
-        self.type = properties.get('t', None)
+        self.original_index = properties.get('original_index', index)
         self.configuration.add_pe(self)
 
     def __eq__(self, other):
@@ -70,21 +70,10 @@ class Accelerator:
         return locations
 
 class Properties:
-    def __init__(self, pe_properties = None, c_properties = None, l_properties = None):
-        if not pe_properties:
-            self.P_p = defaultdict(dict)
-        else:
-            self.P_p = pe_properties
-
-        if not c_properties:
-            self.P_c = defaultdict(dict)
-        else:
-            self.P_c = c_properties
-
-        if not l_properties:
-            self.P_l = defaultdict(dict)
-        else:
-            self.P_l = l_properties
+    def __init__(self, pe_properties = {}, c_properties = {}, l_properties = {}):
+        self.P_p = defaultdict(dict, pe_properties)
+        self.P_c = defaultdict(dict, c_properties)
+        self.P_l = defaultdict(dict, l_properties)
 
     def __getitem__(self, key):
         if type(key) == PE:

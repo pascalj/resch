@@ -36,7 +36,7 @@ class Schedule:
         assert(p.index is not None)
         assert(loc.index is not None)
 
-        if task.cost[p.index] == 0:
+        if task.cost[p.original_index] == 0:
             return po.singleton(earliest.lower)
 
         available = earliest
@@ -56,8 +56,8 @@ class Schedule:
 
         for i in available:
             # is the end still in the same slot?
-            if po.singleton(i.lower + task.cost[p.index]) <= i:
-                return po.closedopen(i.lower, i.lower + task.cost[p.index])
+            if po.singleton(i.lower + task.cost[p.original_index]) <= i:
+                return po.closedopen(i.lower, i.lower + task.cost[p.original_index])
 
         # Should never arrive here, since we're in [earliest, +inf)
         assert(False)
