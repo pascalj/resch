@@ -37,8 +37,6 @@ def get_r():
     return Machine(acc, Topology.default_from_accelerator(acc), props)
 
 
-
-
 def get_speedups():
     Gs = []
     for i in range(100):
@@ -48,13 +46,14 @@ def get_speedups():
             g.vp["cost"][v] = new_cost[int(v)]
         Gs.append(TaskGraph(g))
 
-    log = pd.DataFrame(columns=["machine", "makespan", "cost"])
+    logs = [pd.DataFrame(columns=["machine", "makespan", "cost"])]
     for g in Gs:
         sum = g.w_bar.sum()
         (S, E) = OptimalScheduler(M_pr, t).schedule()
-        log.append({"machine": "pr", "makespan": S.length(), "cost": sum}, ignore_index=True)
+        logs.append(pd.DataFrame([["pr", S.length(), sum]], columns=["machine", "makespan", "cost"]))
         (S, E) = OptimalScheduler(M_r, t).schedule()
-        log.append({"machine": "r", "makespan": S.length(), "cost": sum}, ignore_index=True)
+        logs.append(pd.DataFrame([["r", S.length(), sum]], columns=["machine", "makespan", "cost"]))
+    log = pd.concat(logs, ignore_index=True)
     with open("study_speedups.csv", "w") as f:
         # TODO: log is empty!
         log.to_csv(f)
