@@ -34,7 +34,7 @@ class GA:
                 w[:,pe.original_index] = self.g.w[:,pe.original_index] / (1.00001 - x)
         return w
 
-    def generate(self, num_configurations = 2, n = 4, k = 1):
+    def generate(self, num_configurations = 2, n = 4, k = 1, solutions = [], fitnesses = []):
 
         # TODO: cleanup
         solutions_d = []
@@ -57,13 +57,16 @@ class GA:
             else:
                 gene_space.append(list(range(-1, num_configurations+1)))
 
-        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness, sol_per_pop=3, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True)
+        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness, sol_per_pop=5, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True)
         
         model.run()
 
         best_solution, best_solution_fitness, best_solution_index = model.best_solution()
         print(f"best solution: {best_solution}, best_solution_fitness: {1/best_solution_fitness}, index: {best_solution_index}")
         # model.plot_fitness()
+
+        solutions.extend(model.solutions)
+        fitnesses.extend(model.solutions_fitness)
 
         return solutions_d
 

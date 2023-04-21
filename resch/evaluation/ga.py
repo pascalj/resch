@@ -3,6 +3,7 @@ from resch.machine import optimizer, model
 
 import os
 import pandas as pd
+import numpy as np
 import time
 import random
 from tqdm import tqdm
@@ -126,6 +127,59 @@ def optimize_lu_dr_interco():
     df.to_csv("solutions.csv", index=False)
         
 
+# TODO: clean this mess up :-(
+def optimize_without_limit():
+    g = taskgraph.TaskGraph(generator.random(100))
+
+    def duplication_chromosome_to_dr(k):
+        def duplication_chromosome_to_dr_n(chromosome):
+            # PE -> configuration
+            locs = [model.Location(0, intel_opencl_fpga)]
+            PEs = []
+            configs = {}
+
+            for p_idx, clones in enumerate(zip(*[iter(chromosome)]*k)):
+                for clone_offset, c_idx in enumerate(clones):
+                    if c_idx != -1:
+                        if c_idx not in configs:
+                            configs[c_idx] = model.Configuration(c_idx, locs)
+                        config = configs[c_idx]
+                        PEs.append(model.PE((p_idx * k) + clone_offset, config, {"original_index": p_idx}))
+
+            l_props = [[l, intel_opencl_fpga] for l in locs]
+
+            acc = model.Accelerator(PEs)
+            topo = model.Topology.default_from_accelerator(acc)
+            m = model.Machine(acc, topo, model.Properties({}, {}, l_props))
+
+            assert "r" in m.properties[locs[0]]
+            return m
+
+        return duplication_chromosome_to_dr_n
+
+    num_pes = 1
+    solutions = []
+
+    pygad_solutions = []
+    fitnesses = []
+    for k in range(5, 6):
+        ga = optimizer.GA(g, duplication_chromosome_to_dr(k))
+        solutions.extend(ga.generate(k=k, n=(k * num_pes), num_configurations=5, solutions=pygad_solutions, fitnesses=fitnesses))
+
+    def add_metrics(t):
+        S = t[3]
+        return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), len(np.unique(t[1])))
+
+    metrics = [add_metrics(solution) for solution in solutions]
+
+    sols = []
+    for sol, fitness in zip(pygad_solutions, fitnesses):
+        sols.append((len(np.unique(sol)), fitness))
+
+    df = pd.DataFrame(sols, columns=["configs", "fitness"])
+    df.to_csv("optimize_without_limit.csv")
+
 
 if __name__ == '__main__':
-    optimize_lu_dr_interco()
+    # optimize_lu_dr_interco()
+    optimize_without_limit()
