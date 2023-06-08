@@ -3,7 +3,9 @@
 #include "boost/graph/graphml.hpp"
 #include "boost/property_map/dynamic_property_map.hpp"
 #include "json.hpp"
-#define CL_HPP_TARGET_OPENCL_VERSION 200
+#define CL_HPP_CL_1_2_DEFAULT_BUILD
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #include "spdlog/spdlog.h"
 #include <CL/cl2.hpp>
 #include <chrono>
@@ -111,7 +113,7 @@ struct Configuration {
     }
 
     for (auto &pe : PEs) {
-      spdlog::info("Initializing PE {}", pe.id);
+      spdlog::info("Initializing PE ({}, {}): {}", id, pe.id, pe.function_name);
       pe.init(program);
     }
   }
@@ -152,8 +154,8 @@ struct Machine {
  * @param dev The CL device
  * @param conf A fitting configuration (any shoul be valid)
  */
-constexpr int max_compsize_shift = 20;
-constexpr int max_bufsize_shift = 20;
+constexpr int max_compsize_shift = 23;
+constexpr int max_bufsize_shift = 23;
 
 struct Parameters {
   float compute_beta_0;
@@ -251,7 +253,7 @@ private:
  * @param platform Platform to be set (to the first platform found)
  * @param device Device to be set
  */
-inline void get_first_device(cl::Context &context, cl::Platform &platform,
+inline void get_first_device(cl::Platform &platform,
                              cl::Device &device) {
   std::vector<cl::Platform> platforms;
   cl::Platform::get(&platforms);
@@ -266,7 +268,7 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
   spdlog::info("Selected {}", platform.getInfo<CL_PLATFORM_NAME>());
 
   std::vector<cl::Device> devices;
-  platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+  platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices);
   spdlog::debug("Found {} devices:", devices.size());
   for (auto &device : devices) {
     spdlog::debug("\t{}", device.getInfo<CL_DEVICE_NAME>());
@@ -275,12 +277,6 @@ inline void get_first_device(cl::Context &context, cl::Platform &platform,
 
   device = devices[0];
   spdlog::info("Selected {}", device.getInfo<CL_DEVICE_NAME>());
-
-  cl_int err;
-  cl::Context device_ctx({device}, nullptr, nullptr, nullptr, &err);
-  spdlog::debug("Context: {}", err == CL_SUCCESS);
-
-  context = device_ctx;
 }
 inline std::string vec2str(std::vector<uint32_t>);
 inline auto str2vec(std::string const &str) -> std::vector<uint32_t>;

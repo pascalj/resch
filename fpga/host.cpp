@@ -37,10 +37,11 @@ int main(int argc, char **argv) {
   path schedule_path(argv[3]);
 
   // Static CL variables
-  cl::Context context;
   cl::Platform platform;
   cl::Device device;
-  get_first_device(context, platform, device);
+  get_first_device(platform, device);
+  cl_int err;
+  auto context = cl::Context(device, nullptr, nullptr, nullptr, &err);
 
   // Load and initialize graph, schedule and machine model
   Graph graph;
@@ -70,7 +71,7 @@ std::pair<int, int>
 Parameters::tune_parameters(const cl::Context &ctx, const cl::Device &dev,
                 Configuration &conf,
                 std::function<void(int, cl::Kernel &)> set_args) {
-  auto queue = cl::CommandQueue(ctx, dev, CL_QUEUE_PROFILING_ENABLE);
+  auto queue = cl::CommandQueue(ctx, CL_QUEUE_PROFILING_ENABLE);
   std::vector<cl::Event> events;
 
   cl::NDRange gsize(1);
@@ -80,6 +81,12 @@ Parameters::tune_parameters(const cl::Context &ctx, const cl::Device &dev,
   // Execute a range of kernels and double the "compute size" every time. Also
   // track the timing (CL_QUEUE_PROFILING_ENABLE) and save it into
   // 'measurements'.
+  for (int i = 1; i < 5; i++) {
+    auto &pe = conf.PEs.front();
+    set_args(1, pe.kernel);
+    queue.enqueueNDRangeKernel(pe.kernel, offset, gsize, lsize, nullptr,
+                               nullptr);
+  }
   for (int i = 1; i < max_compsize_shift; i++) {
     auto &pe = conf.PEs.front();
     set_args(i, pe.kernel);
@@ -95,7 +102,8 @@ Parameters::tune_parameters(const cl::Context &ctx, const cl::Device &dev,
   for (auto &event : events) {
     i = i << 1;
     auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
-    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
+    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_END>();
+    spdlog::debug("Kernel event:{}:{}", i, end-start);
     measurements.emplace_back(i, end - start);
   }
 
@@ -200,7 +208,7 @@ void execute_dag_with_allocation(cl::Context &context, Machine &machine,
     auto event = event_pair.second;
 
     auto start = event.getProfilingInfo<CL_PROFILING_COMMAND_START>();
-    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_COMPLETE>();
+    auto end = event.getProfilingInfo<CL_PROFILING_COMMAND_END>();
     std::chrono::nanoseconds duration(end - start);
 
     spdlog::info("Task {}: {}ms [{}, {})", event_pair.first, std::chrono::duration_cast<std::chrono::milliseconds>(duration).count(), start, end);
