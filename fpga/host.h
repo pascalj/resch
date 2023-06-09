@@ -273,7 +273,7 @@ inline void get_first_device(cl::Platform &platform,
   spdlog::info("Selected {}", platform.getInfo<CL_PLATFORM_NAME>());
 
   std::vector<cl::Device> devices;
-  platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices);
+  platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
   spdlog::debug("Found {} devices:", devices.size());
   for (auto &device : devices) {
     spdlog::debug("\t{}", device.getInfo<CL_DEVICE_NAME>());

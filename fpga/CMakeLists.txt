@@ -8,8 +8,24 @@ option(RESCH_SANITIZE "ADD SANITIZERS" OFF)
 add_executable(host host.cpp)
 target_compile_features(host PUBLIC cxx_std_17)
 find_package(OpenCL REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(Boost REQUIRED COMPONENTS graph)
+
+include(FetchContent)
+
+# Get dependencies
+FetchContent_Declare(
+  Boost
+  GIT_REPOSITORY https://github.com/boostorg/boost.git
+  GIT_TAG boost-1.80.0
+  GIT_PROGRESS TRUE
+)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.9.2
+  GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(Boost)
+FetchContent_MakeAvailable(spdlog)
 
 target_link_libraries(host PRIVATE stdc++fs spdlog::spdlog OpenCL Boost::graph )
 
