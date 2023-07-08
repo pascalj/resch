@@ -41,6 +41,17 @@ def slack(S, G):
     slen = makespan(S)
     return sum(slen - G.rank_u(v) - G.rank_d(v) for v in G.nodes()) / G.num_nodes()
 
+def efficiency_r(S, G, m, c, r):
+    s = speedup(S, G)
+    available_resource = m.properties[m][r]
+    used_resources = sum([m.properties[pe][r] for pe in c.PEs])
+    return s / (used_resources / available_resource)
+
+def efficiency(S, G, m):
+    s = speedup(S, G)
+    resources = ["lut", "ff", "ram", "dsp"]
+    return min(efficiency_r(S, G, m, c, r) for r in resources for c in m.configurations())
+
 
 def cp_len(G):
     """ Length of the critical Path of G

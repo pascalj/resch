@@ -43,7 +43,7 @@ class OptimalScheduler:
                     interval = model.NewOptionalIntervalVar(t_s, cost, t_f, active, f"active{suffix}")
 
                     # Ensure t(v) == P_P^t(pe)
-                    if task.type is not None and task.type != M.properties[pe]["t"]:
+                    if task.type is not None and task.type != pe.type:
                         model.Add(active == False)
 
                     instances[(pe.index, l.index, task.index)] = InstanceVar(active=active, t_s=t_s, cost=cost, t_f=t_f, interval=interval, pe=pe, location=l, task=task, ttype=task.type, intcost=intcost)

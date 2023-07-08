@@ -70,10 +70,11 @@ class Accelerator:
         return locations
 
 class Properties:
-    def __init__(self, pe_properties = {}, c_properties = {}, l_properties = {}):
+    def __init__(self, pe_properties = {}, c_properties = {}, l_properties = {}, m_properties = {}):
         self.P_p = defaultdict(dict, pe_properties)
         self.P_c = defaultdict(dict, c_properties)
         self.P_l = defaultdict(dict, l_properties)
+        self.P_m = m_properties
 
     def __getitem__(self, key):
         if type(key) == PE:
@@ -82,6 +83,8 @@ class Properties:
             return self.P_c[key]
         if type(key) == Location:
             return self.P_l[key]
+        if type(key) == Machine:
+            return self.P_m
         assert(False)
 
 

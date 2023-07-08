@@ -1,4 +1,4 @@
-from .metrics import speedup, makespan, slr, slack
+from .metrics import speedup, makespan, slr, slack, efficiency
 from resch.machine import optimizer, model
 
 import os
@@ -49,15 +49,24 @@ lu_pe_properties = {
     3:
     {
         'lut': 5454,
-        'ff': 13169 * 100,
+        'ff': 1316900,
         'ram': 80,
         'dsp': 4,
         't': 4
     }
 }
 
+def random_pe_properties(num_pes):
+    return {
+        'lut': random.randrange(int(intel_opencl_fpga["lut"] / num_pes )),
+        'ff': random.randrange(int(intel_opencl_fpga["ff"] / num_pes )),
+        'ram': random.randrange(int(intel_opencl_fpga["ram"] / num_pes )),
+        'dsp': random.randrange(int(intel_opencl_fpga["dsp"] / num_pes ))
+    }
+
+
 def optimize_lu_dr_interco():
-    g = taskgraph.TaskGraph(generator.lu(5))
+    g = taskgraph.TaskGraph(generator.lu(6))
 
     def simple_chromosome_to_dr(chromosome):
         # PE -> configuration
@@ -83,7 +92,7 @@ def optimize_lu_dr_interco():
     def duplication_chromosome_to_dr(k):
         def duplication_chromosome_to_dr_n(chromosome):
             # PE -> configuration
-            locs = [model.Location(0, intel_opencl_fpga), model.Location(1, intel_opencl_fpga)]
+            locs = [model.Location(0, intel_opencl_fpga)]
             PEs = []
             configs = {}
 
@@ -113,21 +122,146 @@ def optimize_lu_dr_interco():
     num_pes = 4
     solutions = []
 
+    gene_space = []
+    for i in range(n):
+        if i % k == 0:
+            gene_space.append(list(range(0, num_configurations+1)))
+        else:
+            gene_space.append(list(range(-1, num_configurations+1)))
+
     for k in range(1, 11):
         ga = optimizer.GA(g, duplication_chromosome_to_dr(k))
         solutions.extend(ga.generate(k=k, n=(k * num_pes)))
 
     def add_metrics(t):
         S = t[3]
-        return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g))
+        return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, c))
 
     metrics = [add_metrics(solution) for solution in solutions]
 
-    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack"])
-    df.to_csv("solutions.csv", index=False)
+    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "usage"])
+    df.to_csv("optimize_lu_dr_interco.csv", index=False)
         
 
-# TODO: clean this mess up :-(
+
+def optimize_lu_dr_intraco():
+    g = taskgraph.TaskGraph(generator.lu(7))
+
+    def pe_genes(chromosome, p_idx):
+        return chromosome[p_idx:p_idx + 1]
+
+    def update_pe_properties(pe_properties, genes):
+        # { 'lut': 5454, 'ff': 1316900, 'ram': 80, 'dsp': 4, 't': 4 }
+        simd_width = genes[0]
+        assert(simd_width > 0)
+        t = pe_properties['t']
+        new_properties = dict(map(lambda i: (i[0], simd_width * i[1]), pe_properties.items()))
+        new_properties['t'] = t
+        new_properties['factor'] = simd_width
+        return new_properties
+
+    def chromosome_to_dr(chromosome):
+        # PE -> configuration
+        locs = [model.Location(0, intel_opencl_fpga)]
+        PEs = []
+        configs = [model.Configuration(0, locs)]
+        config = configs[0]
+
+        for p_idx in range(4):
+            PEs.append(model.PE(p_idx, config, {"original_index": p_idx}))
+
+        pe_props = [[pe, update_pe_properties(lu_pe_properties[pe_id], pe_genes(chromosome, pe_id))] for pe_id, pe in enumerate(PEs)]
+        l_props = [[l, intel_opencl_fpga] for l in locs]
+
+        acc = model.Accelerator(PEs)
+        topo = model.Topology.default_from_accelerator(acc)
+        m = model.Machine(acc, topo, model.Properties(pe_props, {}, l_props, intel_opencl_fpga))
+
+        assert m.properties[PEs[1]]["lut"] > 0
+        assert "r" in m.properties[locs[0]]
+        return m
+
+    num_pes = 4
+    solutions = []
+
+    gene_space = []
+    for i in range(num_pes):
+        gene_space.append([1, 2, 4, 8])
+
+    ga = optimizer.GA(g, chromosome_to_dr)
+    solutions.extend(ga.generate(gene_space, n = num_pes, num_configurations = 1))
+
+    def add_metrics(t):
+        S = t[3]
+        return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, g, ga.chromosome_to_mm(t[1])))
+
+    metrics = [add_metrics(solution) for solution in solutions]
+
+    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "efficiency"])
+    df.to_csv("optimize_lu_dr_intraco.csv", index=False)
+        
+
+def optimize_random_intraco():
+    gs = [taskgraph.TaskGraph(generator.layer_by_layer(100, 10, 0.2)) for i in range(1)]
+
+    num_pes = 9
+
+    def pe_genes(chromosome, p_idx):
+        return chromosome[p_idx:p_idx + 1]
+
+    def update_pe_properties(pe_properties, genes):
+        simd_width = genes[0]
+        assert(simd_width > 0)
+        t = pe_properties.get('t', None)
+        new_properties = dict(map(lambda i: (i[0], simd_width * i[1]), pe_properties.items()))
+        new_properties['t'] = t
+        new_properties['factor'] = simd_width
+        return new_properties
+
+    def define_chromosome():
+        pe_properties = [random_pe_properties(num_pes) for i in range(9)]     
+        def chromosome_to_dr(chromosome):
+            # PE -> configuration
+            locs = [model.Location(0, intel_opencl_fpga)]
+            PEs = []
+            configs = [model.Configuration(0, locs)]
+            config = configs[0]
+
+            for p_idx in range(num_pes):
+                PEs.append(model.PE(p_idx, config, {"original_index": p_idx}))
+
+            pe_props = [[pe, update_pe_properties(pe_properties[pe_id], pe_genes(chromosome, pe_id))] for pe_id, pe in enumerate(PEs)]
+            l_props = [[l, intel_opencl_fpga] for l in locs]
+
+            acc = model.Accelerator(PEs)
+            topo = model.Topology.default_from_accelerator(acc)
+            m = model.Machine(acc, topo, model.Properties(pe_props, {}, l_props, intel_opencl_fpga))
+
+            assert m.properties[PEs[1]]["lut"] > 0
+            assert "r" in m.properties[locs[0]]
+            return m
+
+        return chromosome_to_dr
+
+    gene_space = []
+    for i in range(num_pes):
+        gene_space.append([1, 1, 1, 2, 4, 8])
+
+    metrics = []
+    for g_idx, g in enumerate(gs):
+        solutions = []
+        ga = optimizer.GA(g, define_chromosome())
+        solutions.extend(ga.generate(gene_space, n = num_pes, num_configurations = 1))
+
+        def add_metrics(t):
+            S = t[3]
+            return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, g, ga.chromosome_to_mm(t[1])), g_idx)
+
+        metrics = [add_metrics(solution) for solution in solutions]
+
+    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "efficiency", "graph"])
+    df.to_csv("optimize_random_intraco.csv", index=False)
+
 def optimize_without_limit():
     g = taskgraph.TaskGraph(generator.random(100))
 
@@ -182,4 +316,6 @@ def optimize_without_limit():
 
 if __name__ == '__main__':
     # optimize_lu_dr_interco()
-    optimize_without_limit()
+    # optimize_lu_dr_intraco()
+    optimize_random_intraco()
+    # optimize_without_limit()

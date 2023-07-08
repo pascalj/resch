@@ -4,6 +4,7 @@ from resch import machine, graph, scheduling, evaluation
 from resch.evaluation import generator
 from resch.scheduling import schedule
 from collections import defaultdict
+import copy
 import pygad
 
 class GA:
@@ -12,9 +13,8 @@ class GA:
         self.chromosome_to_mm = chromosome_to_mm
         self.resource_properties = ["lut", "ff", "ram", "dsp"]
 
-    def apply_cong(self, mm):
+    def apply_cong(self, mm, g):
         P_c = {}
-        w = self.g.w.copy()
 
         def h_linear(x, a, b):
             if x <= a:
@@ -23,25 +23,30 @@ class GA:
                 return (x-a)/(b-a)
             return 1
 
-        # TODO: add h!!!!
         for c in mm.configurations():
             for prop in self.resource_properties: 
                 P_c[prop] = sum(mm.properties[pe].get(prop, 0) for pe in c.PEs)
-
             x = h_linear(max(sum(P_c[prop] / mm.properties[l].get(prop, 1) for l in mm.locations()) / len(mm.locations()) for prop in self.resource_properties), 0.7, 1)
 
             for pe in c.PEs:
-                w[:,pe.original_index] = self.g.w[:,pe.original_index] / (1.00001 - x)
-        return w
+                g.w[:,pe.original_index] = g.w[:,pe.original_index] / (1.00001 - x)
 
-    def generate(self, num_configurations = 2, n = 4, k = 1, solutions = [], fitnesses = []):
+    def apply_optimizations(self, mm, g):
+        for c in mm.configurations():
+            for pe in c.PEs:
+                g.w[:,pe.original_index] = g.w[:,pe.original_index] / mm.properties[pe]["factor"]
+
+    def generate(self, gene_space, num_configurations = 2, n = 4, k = 1, solutions = [], fitnesses = []):
 
         # TODO: cleanup
         solutions_d = []
         def fitness(ga_instance, solution, solution_index):
             mm = self.chromosome_to_mm(solution)
-            w = self.apply_cong(mm)
-            R = scheduling.reft.REFT(mm, self.g, schedule.NoEdgeSchedule)
+            g = copy.deepcopy(self.g)
+            self.apply_cong(mm, g)
+            self.apply_optimizations(mm, g)
+
+            R = scheduling.reft.REFT(mm, g, schedule.NoEdgeSchedule)
             (S, E) = R.schedule()
             print(S.length(), solution)
 
@@ -50,14 +55,8 @@ class GA:
             solutions_d.append((ga_instance.generations_completed, solution, k, S, E))
             return fit
 
-        gene_space = []
-        for i in range(n):
-            if i % k == 0:
-                gene_space.append(list(range(0, num_configurations+1)))
-            else:
-                gene_space.append(list(range(-1, num_configurations+1)))
 
-        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness, sol_per_pop=5, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True)
+        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness, sol_per_pop=10, num_genes=n,gene_type=int, init_range_low=0, init_range_high=n-1, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True)
         
         model.run()
 
@@ -76,7 +75,6 @@ def main():
     g = graph.taskgraph.TaskGraph(generator.lu(8))
     ga = GA(g)
     solution = ga.generate()
-    print(solution)
 
     if len(sys.argv) > 2:
         with open(sys.argv[2], 'w') as file:
