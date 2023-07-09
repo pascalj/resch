@@ -36,7 +36,7 @@ class GA:
             for pe in c.PEs:
                 g.w[:,pe.original_index] = g.w[:,pe.original_index] / mm.properties[pe]["factor"]
 
-    def generate(self, gene_space, num_configurations = 2, n = 4, k = 1, solutions = [], fitnesses = [], initial_population=None):
+    def generate(self, gene_space, k = 1, solutions = [], fitnesses = [], initial_population=None):
 
         # TODO: cleanup
         solutions_d = []
@@ -56,7 +56,7 @@ class GA:
             return fit
 
 
-        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness,  num_genes=n,gene_type=int, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True, initial_population=initial_population)
+        model = pygad.GA(num_generations = 100, num_parents_mating = 2, fitness_func=fitness, gene_type=int, gene_space=gene_space, save_solutions=True,parent_selection_type="rank", save_best_solutions=True, suppress_warnings=True, initial_population=initial_population)
         
         model.run()
 
