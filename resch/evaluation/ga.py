@@ -202,7 +202,7 @@ def optimize_lu_dr_intraco():
         
 
 def optimize_random_intraco():
-    gs = [taskgraph.TaskGraph(generator.layer_by_layer(100, 10, 0.2)) for i in range(1)]
+    gs = [taskgraph.TaskGraph(generator.layer_by_layer(100, 10, 0.2)) for i in range(100)]
 
     num_pes = 9
 
@@ -246,19 +246,19 @@ def optimize_random_intraco():
     gene_space = []
     for i in range(num_pes):
         gene_space.append([1, 1, 1, 2, 4, 8])
+    initial_population = [[1] * num_pes] * 10
 
     metrics = []
+    solutions = []
     for g_idx, g in enumerate(gs):
-        solutions = []
         ga = optimizer.GA(g, define_chromosome())
-        solutions.extend(ga.generate(gene_space, n = num_pes, num_configurations = 1))
+        solutions.extend(ga.generate(gene_space, n = num_pes, num_configurations = 1, initial_population=initial_population))
 
         def add_metrics(t):
             S = t[3]
             return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, g, ga.chromosome_to_mm(t[1])), g_idx)
 
-        metrics = [add_metrics(solution) for solution in solutions]
-
+    metrics = [add_metrics(solution) for solution in solutions]
     df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "efficiency", "graph"])
     df.to_csv("optimize_random_intraco.csv", index=False)
 
