@@ -263,7 +263,7 @@ def optimize_random_intraco():
     df.to_csv("optimize_random_intraco.csv", index=False)
 
 def optimize_random_co(num_graphs = 100, num_configs = 3, r = 100):
-    gs = [taskgraph.TaskGraph(generator.layer_by_layer(100, 10, 0.2)) for i in range(num_graphs)]
+    gs = [taskgraph.TaskGraph(generator.layer_by_layer(100, 5, 0.2)) for i in range(num_graphs)]
     num_pes = 9
 
     def pe_genes(chromosome, p_idx):
@@ -316,15 +316,18 @@ def optimize_random_co(num_graphs = 100, num_configs = 3, r = 100):
     solutions = []
     for g_idx, g in enumerate(gs):
         ga = optimizer.GA(g, define_chromosome())
-        solutions.extend(ga.generate(gene_space, initial_population=initial_population))
+        for row in ga.generate(gene_space, initial_population=initial_population):
+            solutions.append(row + (g_idx,))
 
-        def add_metrics(t):
-            S = t[3]
-            return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, g, ga.chromosome_to_mm(t[1])), g_idx, r)
+    def add_metrics(t):
+        S = t[3]
+        g_idx = t[5]
+        return (t[0], t[1], t[2], makespan(S), speedup(S, g), slr(S, g), slack(S, g), efficiency(S, g, ga.chromosome_to_mm(t[1])), g_idx, r, num_configs)
 
     metrics = [add_metrics(solution) for solution in solutions]
-    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "efficiency", "graph", "r"])
-    df.to_csv("optimize_random_co.csv", index=False)
+    df = pd.DataFrame(metrics, columns=["generation", "solution", "k", "makespan", "speedup", "slr", "slack", "efficiency", "graph", "r", "num_configs"])
+    df.to_csv("optimize_random_co.csv", index=False, mode="a")
+
 
 def optimize_without_limit():
     g = taskgraph.TaskGraph(generator.random(100))
@@ -382,5 +385,7 @@ if __name__ == '__main__':
     # optimize_lu_dr_interco()
     # optimize_lu_dr_intraco()
     # optimize_random_intraco()
-    optimize_random_co()
+    optimize_random_co(num_configs=1, r = 0, num_graphs = 3)
+    optimize_random_co(num_configs=2, r = 0, num_graphs = 3)
+    optimize_random_co(num_configs=3, r = 0, num_graphs = 3)
     # optimize_without_limit()
